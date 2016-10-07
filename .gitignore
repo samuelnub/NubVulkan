@@ -1,0 +1,14 @@
+*.suo
+Debug/NubVulkan.exe
+*.ilk
+Debug/NubVulkan.pdb
+*.opensdf
+NubVulkan.sdf
+*.log
+NubVulkan/Debug/NubVulkan.tlog/CL.command.1.tlog
+*.tlog
+NubVulkan/Debug/vc140.idb
+*.pdb
+*.user
+*.filters
+*.obj
