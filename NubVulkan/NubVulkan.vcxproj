@@ -154,7 +154,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Applications\01HelloTriangle.cpp" />
     <ClCompile Include="Source\Init\Main.cpp" />
+    <ClCompile Include="Source\Util\Constants.cpp" />
+    <ClCompile Include="Source\Util\VDeleter.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Applications\01HelloTriangle.h" />
+    <ClInclude Include="Source\Util\Constants.h" />
+    <ClInclude Include="Source\Util\VDeleter.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
