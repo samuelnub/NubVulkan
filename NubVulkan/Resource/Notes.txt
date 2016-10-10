@@ -1,0 +1,14 @@
+9 Oct 2016:
+	didnt write the first 2 days' worth :(
+	pretty easy to include, just point to the SDK's lib and includes, and 
+	you're ready to use vulkan, no extension wranglers that i know of yet
+	by the way, its following this https://vulkan-tutorial.com
+	vk is meant to be a "car with a manual gearbox", you could screw it up 
+	really badly, or make it more efficient
+	to ease the use of this manual mode, you've got validation layers
+	they're completely. you don't have to use them, but you'd look like 
+	a prick if you didn't
+
+10 Oct 2016:
+	update your video card drivers you nutwit, validation layers wont work
+	with your half-a-year-old drivers

@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <functional>
 #include <vector>
+#include <cstring>
 
 #include <Util/Constants.h>
 #include <Util/VDeleter.h>
@@ -22,6 +23,8 @@ protected:
 private:
 	void initWindow();
 	void initVulkan();
+	bool checkValidationLayerSupport();
+	std::vector<const char *> getRequiredExtensions();
 	void createInstance();
 	void loop();
 

@@ -164,6 +164,9 @@
     <ClInclude Include="Source\Util\Constants.h" />
     <ClInclude Include="Source\Util\VDeleter.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Resource\Notes.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
