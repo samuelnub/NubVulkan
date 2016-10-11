@@ -16,3 +16,6 @@
 11 Oct 2016:
 	debug report callbacks with validation layers all set up and ready
 	i dont understand them, neither do you
+	almost everything done in vulkan is submitted into a command queue for
+	sequential execution, better multithread work handling (hopefully)
+	funcs to find a decent graphics card for vk to use

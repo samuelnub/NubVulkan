@@ -23,7 +23,7 @@ void HelloTriangleApp::initVulkan()
 {
 	this->createInstance();
 	this->setupDebugCallback();
-
+	this->pickPhysicalDevice();
 }
 
 void HelloTriangleApp::setupDebugCallback()
@@ -42,6 +42,69 @@ void HelloTriangleApp::setupDebugCallback()
 	{
 		throw std::runtime_error("Couldn't set up debug callback!");
 	}
+}
+
+void HelloTriangleApp::pickPhysicalDevice()
+{
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+	// oh man, gl with that, eh?
+	if (deviceCount == 0)
+	{
+		throw std::runtime_error("Failed to find any graphics cards with Vulkan support!");
+	}
+
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+	for (const auto &device : devices)
+	{
+		if (this->isDeviceSuitable(device))
+		{
+			this->physicalDevice = device;
+			break;
+		}
+	}
+
+	if (physicalDevice == VK_NULL_HANDLE)
+	{
+		throw std::runtime_error("Failed to find a usable GPU!");
+	}
+}
+
+bool HelloTriangleApp::isDeviceSuitable(VkPhysicalDevice device)
+{
+	QueueFamilyIndices indices = this->findQueueFamilies(device);
+
+	return indices.isComplete();
+}
+
+QueueFamilyIndices HelloTriangleApp::findQueueFamilies(VkPhysicalDevice device)
+{
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	int i = 0;
+	for (const auto &queueFamily : queueFamilies)
+	{
+		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+		{
+			indices.graphicsFamily = i;
+		}
+		if (indices.isComplete())
+		{
+			break;
+		}
+		i++;
+	}
+
+	return indices;
 }
 
 bool HelloTriangleApp::checkValidationLayerSupport()
@@ -148,4 +211,9 @@ void HelloTriangleApp::loop()
 	{
 		glfwPollEvents();
 	}
+}
+
+bool QueueFamilyIndices::isComplete()
+{
+	return this->graphicsFamily >= 0;
 }

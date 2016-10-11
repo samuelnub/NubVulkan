@@ -12,6 +12,13 @@
 #include <Util/Constants.h>
 #include <Util/VDeleter.h>
 
+struct QueueFamilyIndices
+{
+	int graphicsFamily = -1;
+
+	bool isComplete();
+};
+
 class HelloTriangleApp
 {
 public:
@@ -24,6 +31,9 @@ private:
 	void initWindow();
 	void initVulkan();
 	void setupDebugCallback();
+	void pickPhysicalDevice();
+	bool isDeviceSuitable(VkPhysicalDevice device);
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	bool checkValidationLayerSupport();
 	std::vector<const char *> getRequiredExtensions();
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
@@ -39,5 +49,7 @@ private:
 	VkApplicationInfo appInfo = {};
 	// These creation params apply globally
 	VkInstanceCreateInfo createInfo = {};
+	// Automatically deallocated/deleted upon VkInstance deletion, yay
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
 };
