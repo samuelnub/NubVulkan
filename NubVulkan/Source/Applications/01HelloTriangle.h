@@ -23,14 +23,17 @@ protected:
 private:
 	void initWindow();
 	void initVulkan();
+	void setupDebugCallback();
 	bool checkValidationLayerSupport();
 	std::vector<const char *> getRequiredExtensions();
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
 	void createInstance();
 	void loop();
 
 	GLFWwindow *window;
 	
 	VDeleter<VkInstance> instance{ vkDestroyInstance };
+	VDeleter<VkDebugReportCallbackEXT> callback{instance, DestroyDebugReportCallbackEXT};
 
 	// An app isn't global, you can make your own little apps
 	VkApplicationInfo appInfo = {};

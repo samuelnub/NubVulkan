@@ -22,7 +22,26 @@ void HelloTriangleApp::initWindow()
 void HelloTriangleApp::initVulkan()
 {
 	this->createInstance();
+	this->setupDebugCallback();
 
+}
+
+void HelloTriangleApp::setupDebugCallback()
+{
+	if (!enableValidationLayers)
+	{
+		return;
+	}
+
+	VkDebugReportCallbackCreateInfoEXT createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+	createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+	createInfo.pfnCallback = this->debugCallback;
+
+	if (CreateDebugReportCallbackEXT(this->instance, &createInfo, nullptr, callback.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't set up debug callback!");
+	}
 }
 
 bool HelloTriangleApp::checkValidationLayerSupport()
@@ -71,6 +90,12 @@ std::vector<const char *> HelloTriangleApp::getRequiredExtensions()
 		exts.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 	}
 	return exts;
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL HelloTriangleApp::debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
+{
+	std::cerr << "Validation layer: " << msg << "\n";
+	return VK_FALSE;
 }
 
 void HelloTriangleApp::createInstance()

@@ -12,3 +12,7 @@
 10 Oct 2016:
 	update your video card drivers you nutwit, validation layers wont work
 	with your half-a-year-old drivers
+
+11 Oct 2016:
+	debug report callbacks with validation layers all set up and ready
+	i dont understand them, neither do you

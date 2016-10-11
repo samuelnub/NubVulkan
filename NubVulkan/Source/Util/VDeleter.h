@@ -100,7 +100,7 @@ inline void VDeleter<T>::cleanup()
 	{
 		deleter(this->object);
 	}
-	this->object = nullptr;
+	this->object = VK_NULL_HANDLE;
 }
 
 template<typename T>
