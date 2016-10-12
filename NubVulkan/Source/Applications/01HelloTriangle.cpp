@@ -24,6 +24,7 @@ void HelloTriangleApp::initVulkan()
 	this->createInstance();
 	this->setupDebugCallback();
 	this->pickPhysicalDevice();
+	this->createLogicalDevice();
 }
 
 void HelloTriangleApp::setupDebugCallback()
@@ -105,6 +106,49 @@ QueueFamilyIndices HelloTriangleApp::findQueueFamilies(VkPhysicalDevice device)
 	}
 
 	return indices;
+}
+
+void HelloTriangleApp::createLogicalDevice()
+{
+	QueueFamilyIndices indices = findQueueFamilies(this->physicalDevice);
+
+	VkDeviceQueueCreateInfo queueCreateInfo = {};
+	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
+	queueCreateInfo.queueCount = 1;
+	// Most drivers only let you make a few/couple queues,
+	// And handling more than 1 would just be cumbersome
+
+	// VK lets you bribe the command buffer to how you
+	// want your object prioritized, 0.0f to 1.0f
+	float queuePriority = 1.0f;
+	queueCreateInfo.pQueuePriorities = &queuePriority;
+
+	VkPhysicalDeviceFeatures deviceFeatures = {};
+	VkDeviceCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+	createInfo.pQueueCreateInfos = &queueCreateInfo;
+	createInfo.queueCreateInfoCount = 1;
+	createInfo.pEnabledFeatures = &deviceFeatures;
+
+	createInfo.enabledExtensionCount = 0;
+	if (enableValidationLayers)
+	{
+		createInfo.enabledLayerCount = validationLayers.size();
+		createInfo.ppEnabledLayerNames = validationLayers.data();
+	}
+	else
+	{
+		createInfo.enabledLayerCount = 0;
+	}
+
+	if (vkCreateDevice(physicalDevice, &createInfo, nullptr, device.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create a logical VK device!");
+	}
+
+	vkGetDeviceQueue(this->device, indices.graphicsFamily, 0, &this->graphicsQueue);
 }
 
 bool HelloTriangleApp::checkValidationLayerSupport()

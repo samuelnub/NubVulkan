@@ -19,3 +19,6 @@
 	almost everything done in vulkan is submitted into a command queue for
 	sequential execution, better multithread work handling (hopefully)
 	funcs to find a decent graphics card for vk to use
+
+12 Oct 2016:
+	logical device creation
