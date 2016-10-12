@@ -22,3 +22,16 @@
 
 12 Oct 2016:
 	logical device creation
+	you can specify the command queue priority in your vk object, from 0 to 1
+	just like OGL, its context needs a window handle to display to, we'll use
+	GLFW, but SDL can be used, it's just not officially supported, but there's
+	a library out there that eases its use with VK
+	window surface needs to be created right after vkinstance creation, but
+	there's a lot to cover regarding render targets etc.
+	unlike opengl, you can do background rendering without using cheap hacks
+	like making an invisible window
+	the surface needs to find a good parent, aka queue family to adopt it
+	nvidia cards allegedly support ~16 queue families, while
+	AMD supports ~4+, and intel just 1
+	use as many as possible, according to stack overflow answers
+	https://www.reddit.com/r/vulkan/comments/46ckoc/queue_families/
