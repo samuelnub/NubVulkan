@@ -35,3 +35,10 @@
 	AMD supports ~4+, and intel just 1
 	use as many as possible, according to stack overflow answers
 	https://www.reddit.com/r/vulkan/comments/46ckoc/queue_families/
+
+13 Oct 2016:
+	swap chains must be explicitly configured in VK, "thanks"
+	then you choose the most appropriate pixel format to render as a surface
+	presentation mode, gotta do that manually too, well it's kinda standard
+	anyway, aka, whether you want doublebuffering/vsync
+	
