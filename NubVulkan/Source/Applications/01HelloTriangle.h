@@ -3,6 +3,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <Util/Constants.h>
+#include <Util/VDeleter.h>
+
 #include <iostream>
 #include <stdexcept>
 #include <functional>
@@ -10,9 +13,6 @@
 #include <cstring>
 #include <set>
 #include <algorithm>
-
-#include <Util/Constants.h>
-#include <Util/VDeleter.h>
 
 struct QueueFamilyIndices
 {
@@ -63,18 +63,15 @@ private:
 	VDeleter<VkInstance> instance{ vkDestroyInstance };
 	VDeleter<VkDebugReportCallbackEXT> callback{instance, DestroyDebugReportCallbackEXT};
 	VDeleter<VkDevice> device{ vkDestroyDevice };
-
-	// An app isn't global, you can make your own little apps
-	VkApplicationInfo appInfo = {};
-	// These creation params apply globally
-	VkInstanceCreateInfo createInfo = {};
+	
 	// Automatically deallocated/deleted upon VkInstance deletion, yay
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkQueue graphicsQueue;
 	VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
 	VkQueue presentQueue;
+
 	VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
-	// Also cleaned up by VkSwapChain deletion, yea buddy
+	// Also cleaned up by VkSwapchain deletion, yea buddy
 	std::vector<VkImage> swapChainImages;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;

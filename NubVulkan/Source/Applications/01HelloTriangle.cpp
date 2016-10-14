@@ -190,7 +190,14 @@ void HelloTriangleApp::createLogicalDevice()
 	createInfo.queueCreateInfoCount = queueCreateInfos.size();
 	createInfo.pEnabledFeatures = &deviceFeatures;
 
-	createInfo.enabledExtensionCount = 0;
+	// Validation layer debug output gave a really neat
+	// Message as to why it wasn't working:
+	// device extension for swapchain wasn't loaded!
+	// it was set to 0 for the first part and i never
+	// changed it
+	createInfo.enabledExtensionCount = deviceExtensions.size();
+	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+
 	if (enableValidationLayers)
 	{
 		createInfo.enabledLayerCount = validationLayers.size();
@@ -258,9 +265,10 @@ std::vector<const char *> HelloTriangleApp::getRequiredExtensions()
 	return exts;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL HelloTriangleApp::debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char * layerPrefix, const char * msg, void * userData)
+VKAPI_ATTR VkBool32 VKAPI_CALL HelloTriangleApp::debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) 
 {
-	std::cerr << "Validation layer: " << msg << "\n";
+	std::cerr << "validation layer: " << msg << std::endl;
+
 	return VK_FALSE;
 }
 
@@ -400,7 +408,7 @@ void HelloTriangleApp::createSwapChain()
 	// the entire swapchain, whoo boy, covered later
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	if (vkCreateSwapchainKHR(this->device, &createInfo, nullptr, swapChain.replace()) != VK_SUCCESS)
+	if (vkCreateSwapchainKHR(this->device, &createInfo, nullptr, this->swapChain.replace()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Couldn't create a swap chain!");
 	}
@@ -415,25 +423,26 @@ void HelloTriangleApp::createSwapChain()
 
 void HelloTriangleApp::createInstance()
 {
-	if (enableValidationLayers && !this->checkValidationLayerSupport())
+	if (enableValidationLayers && !this->checkValidationLayerSupport()) 
 	{
-		throw std::runtime_error("Validation layers ain't existing :(");
+		throw std::runtime_error("validation layers requested, but not available!");
 	}
 
-	this->appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	this->appInfo.pApplicationName = "Ey doe";
-	this->appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
-	this->appInfo.pEngineName = "no engine :(";
-	this->appInfo.engineVersion = VK_MAKE_VERSION(0, 1, 0);
-	this->appInfo.apiVersion = VK_API_VERSION_1_0;
+	VkApplicationInfo appInfo = {};
+	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	appInfo.pApplicationName = "Hello Triangle";
+	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.pEngineName = "No Engine";
+	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.apiVersion = VK_API_VERSION_1_0;
 
-	this->createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	this->createInfo.pApplicationInfo = &this->appInfo;
+	VkInstanceCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.pApplicationInfo = &appInfo;
 
-	auto exts = this->getRequiredExtensions();
-
-	this->createInfo.enabledExtensionCount = exts.size();
-	this->createInfo.ppEnabledExtensionNames = exts.data();
+	auto extensions = getRequiredExtensions();
+	createInfo.enabledExtensionCount = extensions.size();
+	createInfo.ppEnabledExtensionNames = extensions.data();
 
 	if (enableValidationLayers) 
 	{
@@ -445,15 +454,9 @@ void HelloTriangleApp::createInstance()
 		createInfo.enabledLayerCount = 0;
 	}
 
-	VkResult result = vkCreateInstance(&this->createInfo, nullptr, this->instance.replace());
-
-	if (vkCreateInstance(&this->createInfo, nullptr, this->instance.replace()) != VK_SUCCESS)
+	if (vkCreateInstance(&createInfo, nullptr, instance.replace()) != VK_SUCCESS) 
 	{
-		throw std::runtime_error("Couldn't create Vulkan instance :(");
-	}
-	else
-	{
-		std::cout << "Created a Vulkan instance!\n";
+		throw std::runtime_error("failed to create instance!");
 	}
 }
 

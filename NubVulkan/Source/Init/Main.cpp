@@ -1,7 +1,8 @@
 
 #include <Applications/01HelloTriangle.h>
 
-int main() {
+int main() 
+{
 	HelloTriangleApp app;
 
 	try
