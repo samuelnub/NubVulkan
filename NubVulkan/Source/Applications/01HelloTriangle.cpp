@@ -27,6 +27,7 @@ void HelloTriangleApp::initVulkan()
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
 	this->createSwapChain();
+	this->createImageViews();
 }
 
 void HelloTriangleApp::setupDebugCallback()
@@ -465,6 +466,42 @@ void HelloTriangleApp::createSurface()
 	if (glfwCreateWindowSurface(this->instance, window, nullptr, surface.replace()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Couldn't create window surface!");
+	}
+}
+
+void HelloTriangleApp::createImageViews()
+{
+	// Since we've got an array of these, gotta construct
+	// them manually
+	this->swapChainImageViews.resize(this->swapChainImages.size(), VDeleter<VkImageView>{this->device, vkDestroyImageView});
+
+	for (uint32_t i = 0; i < this->swapChainImages.size(); i++)
+	{
+		VkImageViewCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.image = this->swapChainImages[i];
+		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		createInfo.format = swapChainImageFormat;
+		// ooh, lets you map the colour channels to other
+		// colours, eg red outputs will be mapped to
+		// grayscale, etc., but we're sticking to the def.
+		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+		// subresourcerange specifies what this image's
+		// purpose will be
+		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		createInfo.subresourceRange.baseMipLevel = 0;
+		createInfo.subresourceRange.levelCount = 2;
+		createInfo.subresourceRange.baseArrayLayer = 0;
+		createInfo.subresourceRange.layerCount = 1;
+		
+		if (vkCreateImageView(this->device, &createInfo, nullptr, this->swapChainImageViews[i].replace()) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Couldn't create image view!");
+		}
 	}
 }
 

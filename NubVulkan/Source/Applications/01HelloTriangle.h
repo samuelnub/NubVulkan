@@ -56,6 +56,7 @@ private:
 	void createSwapChain();
 	void createInstance();
 	void createSurface();
+	void createImageViews();
 	void loop();
 
 	GLFWwindow *window;
@@ -75,5 +76,7 @@ private:
 	std::vector<VkImage> swapChainImages;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
+
+	std::vector<VDeleter<VkImageView>> swapChainImageViews;
 
 };

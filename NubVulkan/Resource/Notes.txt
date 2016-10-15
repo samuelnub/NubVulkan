@@ -42,3 +42,12 @@
 	presentation mode, gotta do that manually too, well it's kinda standard
 	anyway, aka, whether you want doublebuffering/vsync
 	
+14 Oct 2016:
+	fixed external link errors - vdeleter didnt work properly, likely the
+	separately defined multi-template functions
+
+15 Oct 2016:
+	image views. in order to use any VkImage, like those in the swap chain,
+	we have to make a VkImageView obj. literally a view onto the image
+	it describes how to access the image and which part of the image to access
+	eg. if it should just be treated like only its depth map existed
