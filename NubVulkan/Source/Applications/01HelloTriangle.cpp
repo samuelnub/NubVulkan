@@ -28,6 +28,7 @@ void HelloTriangleApp::initVulkan()
 	this->createLogicalDevice();
 	this->createSwapChain();
 	this->createImageViews();
+	this->createGraphicsPipeline();
 }
 
 void HelloTriangleApp::setupDebugCallback()
@@ -503,6 +504,11 @@ void HelloTriangleApp::createImageViews()
 			throw std::runtime_error("Couldn't create image view!");
 		}
 	}
+}
+
+void HelloTriangleApp::createGraphicsPipeline()
+{
+	// TODO
 }
 
 void HelloTriangleApp::loop()

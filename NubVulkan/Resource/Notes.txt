@@ -51,3 +51,22 @@
 	we have to make a VkImageView obj. literally a view onto the image
 	it describes how to access the image and which part of the image to access
 	eg. if it should just be treated like only its depth map existed
+	a pure image view isnt totally suitable for setting as a render target
+	yet though, we'd still need a framebuffer! doh
+
+16 Oct 2016:
+	shader pipelines - you specify what you need! dont need tesselation
+	shaders? just omit it in the setup process, more tedius, but fine tuned
+	unlike ogl, you have to precompile your shader code to bytecode :(
+	(the SPIR-V format, used by VK and OCL)
+	the VK SDK has a glsl-to-spir-v compiler, @ glslangValidator.exe
+	in case you're an idiot and forgot about how shaders in glsl work,
+	main() gets invoked per object (eg vertex, fragment), and you don't pass
+	any parameters into main(), but are handled via global variables in your
+	code. it's got built-in vector and matrix primitives
+	if you're just pasting coordinates onto your screen, it would be
+	on the framebuffer: 0px to 1920px (eg), and -1 to +1 on your clip coords,
+	by the way, vulkan flipped the Y coords on clip space, so y=-1 is up top,
+	and the Z value follows directX now, from 0 to 1 (dont need to manually
+	inverse for better precision, like in opengl, yeah buddy)
+	vertex buffers are tedious to set up on VK, so its gonna be postponed :(

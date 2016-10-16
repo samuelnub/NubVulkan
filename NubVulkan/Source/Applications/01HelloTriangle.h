@@ -57,6 +57,7 @@ private:
 	void createInstance();
 	void createSurface();
 	void createImageViews();
+	void createGraphicsPipeline();
 	void loop();
 
 	GLFWwindow *window;
