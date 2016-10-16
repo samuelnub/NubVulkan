@@ -70,3 +70,5 @@
 	and the Z value follows directX now, from 0 to 1 (dont need to manually
 	inverse for better precision, like in opengl, yeah buddy)
 	vertex buffers are tedious to set up on VK, so its gonna be postponed :(
+	made a cute little bat file to compile them using the aforementioned
+	compiler
