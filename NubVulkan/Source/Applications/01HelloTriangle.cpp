@@ -343,6 +343,48 @@ VkExtent2D HelloTriangleApp::chooseSwapExtent(const VkSurfaceCapabilitiesKHR & c
 	}
 }
 
+std::vector<char> HelloTriangleApp::readFile(const std::string & fileName)
+{
+	// generic file opener (as binary)
+
+	// ::ate starts reading @ end of file
+	// ::binary reads it as binary file
+	// (our spir-v bytecode)
+	std::ifstream file(fileName, std::ios::ate | std::ios::binary);
+
+	if (!file.is_open())
+	{
+		throw std::runtime_error("Failed to open file");
+	}
+
+	// .tellg() gives the index at where the "cursor" is,
+	// which is at the EOF currently, which gives us size
+	size_t fileSize = (size_t)file.tellg();
+	std::vector<char> buffer(fileSize);
+
+	// seek back to beginning since we have filesize
+	file.seekg(0);
+	file.read(buffer.data(), fileSize);
+
+	file.close();
+	return buffer; // wonderful
+}
+
+void HelloTriangleApp::createShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule)
+{
+	// Making a shader module is "easy", just give it the
+	// address of your code data buffer & its size
+	VkShaderModuleCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = code.size();
+	createInfo.pCode = (uint32_t *)code.data();
+
+	if (vkCreateShaderModule(device, &createInfo, nullptr, shaderModule.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create shader module!");
+	}
+}
+
 void HelloTriangleApp::createSwapChain()
 {
 	// Tying it all together
@@ -508,7 +550,37 @@ void HelloTriangleApp::createImageViews()
 
 void HelloTriangleApp::createGraphicsPipeline()
 {
-	// TODO
+	// For now, we've just got these 2 cute lil shaders
+	auto vertShaderCode = readFile("Shaders/vert.spv");
+	auto fragShaderCode = readFile("Shaders/frag.spv");
+
+	// Just like in opengl, we can discard the shaders
+	// once we've got our program compiled and linked
+	VDeleter<VkShaderModule> vertShaderModule{ this->device, vkDestroyShaderModule };
+	VDeleter<VkShaderModule> fragShaderModule{ this->device, vkDestroyShaderModule };
+	this->createShaderModule(vertShaderCode, vertShaderModule);
+	this->createShaderModule(fragShaderCode, fragShaderModule);
+
+	// Right now, the VkShaderModule object is just a
+	// flat wrapper around the bytecode buffer
+	// time to link them into a program!
+	VkPipelineShaderStageCreateInfo vertCreateInfo = {};
+	vertCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertCreateInfo.module = vertShaderModule;
+	vertCreateInfo.pName = "main";
+	// You can define your own entry point! interesting
+
+	VkPipelineShaderStageCreateInfo fragCreateInfo = {};
+	fragCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragCreateInfo.module = fragShaderModule;
+	fragCreateInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = {
+		vertCreateInfo,
+		fragCreateInfo
+	};
 }
 
 void HelloTriangleApp::loop()

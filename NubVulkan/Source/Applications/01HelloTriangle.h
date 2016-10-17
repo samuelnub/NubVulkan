@@ -13,6 +13,7 @@
 #include <cstring>
 #include <set>
 #include <algorithm>
+#include <fstream>
 
 struct QueueFamilyIndices
 {
@@ -53,6 +54,8 @@ private:
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
+	static std::vector<char> readFile(const std::string &fileName);
+	void createShaderModule(const std::vector<char> &code, VDeleter<VkShaderModule> &shaderModule);
 	void createSwapChain();
 	void createInstance();
 	void createSurface();

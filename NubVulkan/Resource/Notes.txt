@@ -72,3 +72,8 @@
 	vertex buffers are tedious to set up on VK, so its gonna be postponed :(
 	made a cute little bat file to compile them using the aforementioned
 	compiler
+
+17 Oct 2016:
+	funcs just to link the compiled spir-v bytecode into our shader programs
+	glsl code -> spir-v bytecode -> loaded into program -> turn it into a
+	vk shader module -> link the modules together into a full pipeline

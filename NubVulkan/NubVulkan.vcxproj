@@ -167,6 +167,11 @@
   <ItemGroup>
     <Text Include="Resource\Notes.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resource\Shaders\compile.bat" />
+    <None Include="Resource\Shaders\shader.frag" />
+    <None Include="Resource\Shaders\shader.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
