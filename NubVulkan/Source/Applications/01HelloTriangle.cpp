@@ -28,6 +28,7 @@ void HelloTriangleApp::initVulkan()
 	this->createLogicalDevice();
 	this->createSwapChain();
 	this->createImageViews();
+	this->createRenderPass();
 	this->createGraphicsPipeline();
 }
 
@@ -548,6 +549,89 @@ void HelloTriangleApp::createImageViews()
 	}
 }
 
+void HelloTriangleApp::createRenderPass()
+{
+	// Hold up! before we can finish up that pipeline,
+	// We gotta set this up! We need to tell vulkan about
+	// the framebuffer attachments we'll be using for
+	// rendering. eg no. of colour & depth buffers, how 
+	// many samples, and how to handle their contents
+	// throughout rendering
+
+	VkAttachmentDescription colAtt = {};
+	colAtt.format = this->swapChainImageFormat;
+	colAtt.samples = VK_SAMPLE_COUNT_1_BIT;
+	// stick to 1, as we're not doing anything for now
+
+	colAtt.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colAtt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	// these 2 params determine what to do with the data
+	// in the attachment before & after rendering
+	// op_clear clears the vals to a const at the start
+	// op_load preserves the existing contents of the att
+	// op_dont_care treats existing contents as undefined
+	// storeop operations are as follows:
+	// op_store - rendered contents will be stored in mem
+	// and can be read later
+	// op_dont_care - contents of the framebuffer will be
+	// undefined after the rendering op
+
+	colAtt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colAtt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+	colAtt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colAtt.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	// textures and framebuffers in vk are represented by
+	// the VkImage object, with certain pixel formats etc
+	// specified. however, the layout of pixels can change
+	// based on what you want to do with the image
+	// vk_image_layout_color_attachment_optimal - images
+	// used as colour att.
+	// vk_image_layout_present_src_khr - images to be
+	// presented in the swapchain
+	// vk_image_layout_transfer_dst_optimal - images used
+	// as destination for a mem copy operation
+	// more info in the fuuuuture
+	// initial layout specifies the format prior to the
+	// render pass, and the final layout is the format to
+	// transition into when the render pass finishes
+
+	// Subpasses and attachment references
+	// a single render pass can have multiple sub-passes
+	// they're subsequent rendering operations that depend
+	// on the contents of framebuffers in previous passes
+	// eg. motion blur effects
+
+	VkAttachmentReference colAttRef = {};
+	colAttRef.attachment = 0;
+	// our array consists of a single vkattachmentdesc,
+	// so its index is just the first; 0
+	colAttRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// just stick with this, it's optimal already!
+
+	// just a struct to describe the subpass
+	// ps: vk may support compute subpasses in the future!
+	VkSubpassDescription subPass = {};
+	subPass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subPass.colorAttachmentCount = 1;
+	subPass.pColorAttachments = &colAttRef;
+	// you can also ref these kinds of subpass att's:
+	// pInputAttachments, pResolveAttachments,
+	// pDepthStencilAttachment and pPreserveAttachments
+
+	VkRenderPassCreateInfo rendPassInfo = {};
+	rendPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	rendPassInfo.attachmentCount = 1;
+	rendPassInfo.pAttachments = &colAtt;
+	rendPassInfo.subpassCount = 1;
+	rendPassInfo.pSubpasses = &subPass;
+
+	if (vkCreateRenderPass(this->device, &rendPassInfo, nullptr, this->renderPass.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create render pass!");
+	}
+}
+
 void HelloTriangleApp::createGraphicsPipeline()
 {
 	// For now, we've just got these 2 cute lil shaders
@@ -708,7 +792,7 @@ void HelloTriangleApp::createGraphicsPipeline()
 	// you can use as blend factors
 	VkPipelineColorBlendStateCreateInfo colBlend = {};
 	colBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colBlend.logicOpEnable = VK_TRUE;
+	colBlend.logicOpEnable = VK_FALSE;
 	colBlend.logicOp = VK_LOGIC_OP_COPY; // optional
 	colBlend.attachmentCount = 1;
 	colBlend.pAttachments = &colBlendAtt;
@@ -753,6 +837,51 @@ void HelloTriangleApp::createGraphicsPipeline()
 	{
 		throw std::runtime_error("Couldn't create pipeline layout!");
 	}
+
+	// whew, after all of that, we can combine all the 
+	// structs and objects to actually make the pipeline
+	// quick recap of the stuff we did up there ^
+	// shader stages, fixed func states, pipeline layout,
+	// and the render pass
+	
+	VkGraphicsPipelineCreateInfo pipelineInfo = {};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+
+	pipelineInfo.pVertexInputState = &vertInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAss;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multiSample;
+	pipelineInfo.pDepthStencilState = nullptr; // optional
+	pipelineInfo.pColorBlendState = &colBlend;
+	pipelineInfo.pDynamicState = nullptr; // optional
+
+	// let's now ref all the structs describing the fixed
+	// func stage
+	pipelineInfo.layout = pipelineLayout;
+
+	pipelineInfo.renderPass = renderPass;
+	pipelineInfo.subpass = 0; // index of subpass
+
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+	pipelineInfo.basePipelineIndex = -1; // optional
+	// vulkan allows you to create a new graphics pipeline
+	// by deriving from a previous existing one
+	// much less expensive
+	// for now we have nothing to switch back to, so leave
+	// it as null
+
+	if (vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, this->graphicsPipeline.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create graphics pipeline!");
+	}
+}
+
+bool QueueFamilyIndices::isComplete()
+{
+	return this->graphicsFamily >= 0 && this->presentFamily >= 0;
 }
 
 void HelloTriangleApp::loop()
@@ -761,9 +890,4 @@ void HelloTriangleApp::loop()
 	{
 		glfwPollEvents();
 	}
-}
-
-bool QueueFamilyIndices::isComplete()
-{
-	return this->graphicsFamily >= 0 && this->presentFamily >= 0;
 }
