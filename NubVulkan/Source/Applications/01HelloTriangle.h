@@ -60,6 +60,7 @@ private:
 	void createInstance();
 	void createSurface();
 	void createImageViews();
+	void createRenderPass();
 	void createGraphicsPipeline();
 	void loop();
 
@@ -83,6 +84,8 @@ private:
 
 	std::vector<VDeleter<VkImageView>> swapChainImageViews;
 
+	VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
 	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
+	VDeleter<VkPipeline> graphicsPipeline{ device, vkDestroyPipeline };
 
 };
