@@ -83,4 +83,6 @@ private:
 
 	std::vector<VDeleter<VkImageView>> swapChainImageViews;
 
+	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
+
 };

@@ -77,3 +77,15 @@
 	funcs just to link the compiled spir-v bytecode into our shader programs
 	glsl code -> spir-v bytecode -> loaded into program -> turn it into a
 	vk shader module -> link the modules together into a full pipeline
+	fixed functions - unlike other gl's, in vulkan, you have to explicitly
+	define all the functions and stuff, like the viewport size to the
+	colour blending func, all in createGraphicsPipeline(); right now
+	some of the fixed functions to configure are vert input, input assembly,
+	viewports and scissors, the rasterizer, multisampling, depth and stencil
+	testing, colour blending, and many more
+	sad
+
+18 Oct 2016:
+	finished up specifying the fixed function config in pipeline creation
+	read those comments in createGraphicsPipeline();
+	too tired to recap here lol

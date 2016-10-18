@@ -581,6 +581,178 @@ void HelloTriangleApp::createGraphicsPipeline()
 		vertCreateInfo,
 		fragCreateInfo
 	};
+
+	// Specifying vertex input
+	// Since we're idiots at the moment, we've put the
+	// vert data within the shader itself, so we can omit
+	// specifying the vertex data for now
+
+	VkPipelineVertexInputStateCreateInfo vertInputInfo = {};
+	vertInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertInputInfo.vertexBindingDescriptionCount = 0;
+	vertInputInfo.pVertexBindingDescriptions = nullptr;
+	vertInputInfo.vertexAttributeDescriptionCount = 0;
+	vertInputInfo.pVertexAttributeDescriptions = nullptr;
+
+	// Input assembly, what kind of geometry is this?
+	// fill? line? points?
+	// should primitive restart be enabled?
+
+	VkPipelineInputAssemblyStateCreateInfo inputAss = {};
+	inputAss.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAss.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAss.primitiveRestartEnable = VK_FALSE;
+	// If you set restarting to be enabled, youo could
+	// have "breaks" between your rendered geometry,
+	// by specifying something like 0xFFFF
+
+	// Viewports and scissors
+
+	VkViewport viewport = {};
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.width = (float)this->swapChainExtent.width;
+	viewport.height = (float)this->swapChainExtent.height;
+	viewport.minDepth = 1.0f;
+	viewport.maxDepth = 0.0f;
+	// Depth range for the framebuffer, 0 to 1.0 is normal
+
+	// What region of pixels will be stored
+	VkRect2D scissor = {};
+	scissor.offset = { 0,0 }; // hoo, hoo, I'm an owl
+	scissor.extent = this->swapChainExtent;
+
+	// combine the viewport and scissor info
+	VkPipelineViewportStateCreateInfo viewportState = {};
+	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportState.viewportCount = 1;
+	viewportState.pViewports = &viewport;
+	viewportState.scissorCount = 1;
+	viewportState.pScissors = &scissor;
+
+	// Rasterizer
+	// Takes our stupid geometry, and fragments them
+	// to be shaded later by the frag shader
+	// It also performs depth testing, face culling and
+	// the scissor test. neat
+
+	VkPipelineRasterizationStateCreateInfo rasterizer = {};
+	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer.depthClampEnable = VK_FALSE;
+	// if you clamp them, fragments outside the depth
+	// bounds will be clamped instead of discarded
+
+	rasterizer.rasterizerDiscardEnable = VK_FALSE;
+	// lol, if you set it to true, then geometry never
+	// gets passed through the rasterizer, and just gets
+	// discarded, giving you no results in the framebuffer
+
+	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+	// fill, line, point
+
+	rasterizer.lineWidth = 1.0f;
+	// width in terms of fragments, by the way, if you
+	// want lines any thicker than 1.0f, you need to 
+	// enable the "wideLines" gpu feature
+
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+
+	rasterizer.depthBiasEnable = VK_FALSE;
+	rasterizer.depthBiasConstantFactor = 0.0f;
+	rasterizer.depthBiasClamp = 0.0f;
+	rasterizer.depthBiasSlopeFactor = 0.0f;
+	// optional stuff if you set it to false
+	// usually modified for shadow mapping
+
+	// Multisampling
+
+	VkPipelineMultisampleStateCreateInfo multiSample = {};
+	multiSample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multiSample.sampleShadingEnable = VK_FALSE;
+	multiSample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	multiSample.minSampleShading = 1.0f; //optional
+	multiSample.pSampleMask = nullptr; //optional
+	multiSample.alphaToCoverageEnable = VK_FALSE; //optional
+	multiSample.alphaToOneEnable = VK_FALSE; //optional
+
+	// Depth and stencil testing
+	// Not covered at the moment, but it involves
+	// VkPipeLineDepthStencilStateCreateInfo
+
+	// Colour blending
+	// after a frag shader has returned a colour, it needs
+	// to be combined with the colour that's already in
+	// the framebuffer. we specify how to do it, whether
+	// to mix old and new, or combine using a bitwise op
+
+	// Notice how this isn't the "createinfo" struct yet
+	// this is the config attached to each framebuffer
+	VkPipelineColorBlendAttachmentState colBlendAtt = {};
+	colBlendAtt.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT |
+		VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT |
+		VK_COLOR_COMPONENT_A_BIT;
+	colBlendAtt.blendEnable = VK_TRUE;
+	// the rest of this is optional
+	colBlendAtt.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	colBlendAtt.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colBlendAtt.colorBlendOp = VK_BLEND_OP_ADD;
+	colBlendAtt.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colBlendAtt.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colBlendAtt.alphaBlendOp = VK_BLEND_OP_ADD;
+
+	// Now this struct applies to the whole array of 
+	// framebuffers, and lets you set blend consts that
+	// you can use as blend factors
+	VkPipelineColorBlendStateCreateInfo colBlend = {};
+	colBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colBlend.logicOpEnable = VK_TRUE;
+	colBlend.logicOp = VK_LOGIC_OP_COPY; // optional
+	colBlend.attachmentCount = 1;
+	colBlend.pAttachments = &colBlendAtt;
+	colBlend.blendConstants[0] = 0.0f; //optional
+	colBlend.blendConstants[1] = 0.0f;
+	colBlend.blendConstants[2] = 0.0f;
+	colBlend.blendConstants[3] = 0.0f;
+
+	// Dynamic state
+	// Here's a reliever: we don't have to recreate the
+	// entire pipeline if we just want to modify certain
+	// parts, with the blend ops being one!
+
+	// Here's some
+	VkDynamicState dyanamicStates[] = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_LINE_WIDTH
+	};
+	
+	VkPipelineDynamicStateCreateInfo dynamicState = {};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicState.dynamicStateCount = 2;
+	dynamicState.pDynamicStates = dyanamicStates;
+	// This will cause the config of those specified
+	// to be ignored at compiletime, and will need to be
+	// specified at drawtime
+	// Dynamic state variables are similar to uniform vars
+	// - globals used within the shaders
+
+	// Pipeline layout
+	// uniform values need to be specified during pipeline
+	// creation. aw man
+
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 0; // optional
+	pipelineLayoutInfo.pSetLayouts = nullptr; // optional
+	pipelineLayoutInfo.pushConstantRangeCount = 0; //optional
+	pipelineLayoutInfo.pPushConstantRanges = 0; //optional
+
+	if (vkCreatePipelineLayout(this->device, &pipelineLayoutInfo, nullptr, this->pipelineLayout.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create pipeline layout!");
+	}
 }
 
 void HelloTriangleApp::loop()
