@@ -30,6 +30,9 @@ void HelloTriangleApp::initVulkan()
 	this->createImageViews();
 	this->createRenderPass();
 	this->createGraphicsPipeline();
+	this->createFrameBuffers();
+	this->createCommandPool();
+	this->createCommandBuffers();
 }
 
 void HelloTriangleApp::setupDebugCallback()
@@ -538,7 +541,7 @@ void HelloTriangleApp::createImageViews()
 		// purpose will be
 		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		createInfo.subresourceRange.baseMipLevel = 0;
-		createInfo.subresourceRange.levelCount = 2;
+		createInfo.subresourceRange.levelCount = 1;
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 		
@@ -879,6 +882,155 @@ void HelloTriangleApp::createGraphicsPipeline()
 	}
 }
 
+void HelloTriangleApp::createFrameBuffers()
+{
+	this->swapChainFramebuffers.resize(this->swapChainImageViews.size(), VDeleter<VkFramebuffer>{this->device, vkDestroyFramebuffer});
+
+	for (size_t i = 0; i < this->swapChainImageViews.size(); i++)
+	{
+		VkImageView attachments[] = {
+			this->swapChainImageViews[i]
+		};
+
+		VkFramebufferCreateInfo fbInfo = {};
+		fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		fbInfo.renderPass = this->renderPass;
+		fbInfo.attachmentCount = 1;
+		fbInfo.pAttachments = attachments;
+		fbInfo.width = this->swapChainExtent.width;
+		fbInfo.height = this->swapChainExtent.height;
+		fbInfo.layers = 1;
+
+		if (vkCreateFramebuffer(this->device, &fbInfo, nullptr, this->swapChainFramebuffers[i].replace()) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Couldn't create framebuffer!");
+		}
+	}
+}
+
+void HelloTriangleApp::createCommandPool()
+{
+	QueueFamilyIndices queueFamilyIndices = this->findQueueFamilies(this->physicalDevice);
+
+	VkCommandPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+	poolInfo.flags = 0; // optional
+	// yep, just those 2 parameters
+	// we're going to record commands for drawing, which
+	// is why we've chosen our graphics queue family
+
+	if (vkCreateCommandPool(this->device, &poolInfo, nullptr, this->commandPool.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create command pool!");
+	}
+}
+
+void HelloTriangleApp::createCommandBuffers()
+{
+	this->commandBuffers.resize(this->swapChainFramebuffers.size());
+
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = this->commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = (uint32_t)this->commandBuffers.size();
+	// the level param specifies if the alloc'd buffs are
+	// primary or secondary buffs.
+	// primary: can be submitted to a queue for exec., but
+	// cannot be called from other command buffs
+	// secondary: cannot be submitted directly, but can be
+	// called from primary command buffs
+
+	if (vkAllocateCommandBuffers(this->device, &allocInfo, this->commandBuffers.data()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't allocate command buffers!");
+	}
+
+	// we begin recording a command buff by calling
+	// vkBeginCommandBuffer.
+	for (size_t i = 0; i < this->commandBuffers.size(); i++)
+	{
+		VkCommandBufferBeginInfo begInfo = {};
+		begInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		begInfo.pInheritanceInfo = nullptr; // optional
+		// for the flags param, it specifies how we're gon
+		// use the command buff, you could do:
+		// _one_time_submit_bit - the buff will be
+		// re-recorded right after exec. it once
+		// _render_pass_continue_bit - this is a secondary
+		// command buff that will be entirely within a
+		// single render pass
+		// simultaneous_use_bit - the buff can be
+		// re-submitted while it's also already pending an
+		// execution
+
+		// weeoooo weeeooooo
+		vkBeginCommandBuffer(this->commandBuffers[i], &begInfo);
+
+		VkRenderPassBeginInfo rendPassInfo = {};
+		rendPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		rendPassInfo.renderPass = this->renderPass;
+		rendPassInfo.framebuffer = this->swapChainFramebuffers[i];
+
+		rendPassInfo.renderArea.offset = { 0,0 }; // ey
+		rendPassInfo.renderArea.extent = this->swapChainExtent;
+
+		VkClearValue clearCol = { 0.1f, 0.1f, 0.1f, 1.0f };
+		rendPassInfo.clearValueCount = 1;
+		rendPassInfo.pClearValues = &clearCol;
+
+		// ooh
+		vkCmdBeginRenderPass(this->commandBuffers[i], &rendPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		// the render pass can now commence!
+		// all of the funcs that record commands can be
+		// recognised by their vkCmd prefix. they all
+		// return void, so no error handling till we're
+		// done! this is the risky life, my camaraderie
+		// by the way, _inline means that the renderpass
+		// commands will be embedded in the primary cmd
+		// buffer itself and no secondary buff will be
+		// executed. _secondary_command_buffers - the cmds
+		// will be executed from secondary command buffs
+		
+		// Basic drawing commands:
+		// I put it in this stupid scope block just to
+		// let you know that you're an idiot, and this is
+		// recording commands to the command buffer
+		{
+			// sticky!
+			vkCmdBindPipeline(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
+			// that second enum param specifies whether
+			// the pipeline object is a compute or
+			// graphics pipeline
+
+			// the moment you've been waiting for,
+			// duh, duh luh duh duh duh, duh luh duh duh
+			// duh duh duh duh duh duh duh! duh dillie duh
+			// duh dillie duh dillie duh di di duh
+			// *breath*
+
+			vkCmdDraw(this->commandBuffers[i], 3, 1, 0, 0);
+			// oh
+			// well, since we've done so much just now -
+			// specifying all the parameters for the
+			// pipeline, how to present it etc, this part
+			// is just pure ease
+			// those params by the way; are specifying the
+			// vertex count, instance count, first vert
+			// offset, and first instance offset
+		}
+
+		vkCmdEndRenderPass(this->commandBuffers[i]);
+
+		if (vkEndCommandBuffer(this->commandBuffers[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to record command buffer!");
+		}
+	}
+}
+
 bool QueueFamilyIndices::isComplete()
 {
 	return this->graphicsFamily >= 0 && this->presentFamily >= 0;
@@ -891,3 +1043,6 @@ void HelloTriangleApp::loop()
 		glfwPollEvents();
 	}
 }
+
+// a thousand SLOC, and we haven't made a gosh darn
+// triangle show up on our dinky displays

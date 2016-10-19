@@ -62,6 +62,9 @@ private:
 	void createImageViews();
 	void createRenderPass();
 	void createGraphicsPipeline();
+	void createFrameBuffers();
+	void createCommandPool();
+	void createCommandBuffers();
 	void loop();
 
 	GLFWwindow *window;
@@ -87,5 +90,10 @@ private:
 	VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
 	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
 	VDeleter<VkPipeline> graphicsPipeline{ device, vkDestroyPipeline };
+	std::vector<VDeleter<VkFramebuffer>> swapChainFramebuffers;
+
+	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
+	// Each one holds record of our commands. Auto free'd when pool is gone
+	std::vector<VkCommandBuffer> commandBuffers;
 
 };

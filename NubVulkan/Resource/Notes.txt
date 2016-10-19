@@ -89,3 +89,17 @@
 	finished up specifying the fixed function config in pipeline creation
 	read those comments in createGraphicsPipeline();
 	too tired to recap here lol
+	finished up createGraphicsPipeline();
+
+19 Oct 2016:
+	framebuffers - the attachments we specified during render pass creation
+	are bound by wrapping them into a VkFrameBuffer object. each fb references
+	all the VkImageView objects that represent the attachments. We need a fb
+	for each image in the swapchain
+	command pools, and after that -
+	command buffers - you idiot hammond, you don't just call functions such as
+	drawing/memory transfer operations in vulkan, you have to log and record
+	all your wanted-actions into command buffer objects. this should be great
+	as you could dispatch them multithreaded-ly (the whole reason i'm here)
+	and you could just iterate through the command buffer in 1 main thread
+	beautiful.
