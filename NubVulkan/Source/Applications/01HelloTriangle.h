@@ -65,6 +65,8 @@ private:
 	void createFrameBuffers();
 	void createCommandPool();
 	void createCommandBuffers();
+	void createSemaphores();
+	void drawFrame();
 	void loop();
 
 	GLFWwindow *window;
@@ -95,5 +97,8 @@ private:
 	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
 	// Each one holds record of our commands. Auto free'd when pool is gone
 	std::vector<VkCommandBuffer> commandBuffers;
+
+	VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
+	VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
 
 };

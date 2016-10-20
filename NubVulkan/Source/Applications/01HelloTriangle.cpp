@@ -33,6 +33,7 @@ void HelloTriangleApp::initVulkan()
 	this->createFrameBuffers();
 	this->createCommandPool();
 	this->createCommandBuffers();
+	this->createSemaphores();
 }
 
 void HelloTriangleApp::setupDebugCallback()
@@ -621,6 +622,37 @@ void HelloTriangleApp::createRenderPass()
 	// you can also ref these kinds of subpass att's:
 	// pInputAttachments, pResolveAttachments,
 	// pDepthStencilAttachment and pPreserveAttachments
+	
+	// Hey! I came from the drawFrame() function! go there
+	// to see why I'm here
+	VkSubpassDependency dep = {};
+	dep.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dep.dstSubpass = 0;
+	// the fields specify the indices of the dependencies
+	// the VK_SUBPASS_EXTERNAL refers to the implicit
+	// subpass before/after the renderpass depending on
+	// whether it's specified in src or dst subpass
+	// the index 0 refers to our subpass index, which is
+	// the only one right now lol
+	// dst must always be higher than src to prevent
+	// cycles in the dependency graph
+
+	dep.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	dep.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	// these params specify the ops to wait on and the
+	// stages in which these ops occur. we need to wait
+	// for the swap chain to finish reading from the image
+	// before we can access it, duh. this read happens in
+	// the last pipeline stage
+
+	dep.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	// or'd. the operations that should wait on this are
+	// in the color attachment stage and involve the read
+	// and write of the color attachment. these settings
+	// will prevent the transition from happening until it
+	// is necessary & allowed; when we want to start
+	// writing colours to it
 
 	VkRenderPassCreateInfo rendPassInfo = {};
 	rendPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -628,6 +660,10 @@ void HelloTriangleApp::createRenderPass()
 	rendPassInfo.pAttachments = &colAtt;
 	rendPassInfo.subpassCount = 1;
 	rendPassInfo.pSubpasses = &subPass;
+
+	//added on!
+	rendPassInfo.dependencyCount = 1;
+	rendPassInfo.pDependencies = &dep;
 
 	if (vkCreateRenderPass(this->device, &rendPassInfo, nullptr, this->renderPass.replace()) != VK_SUCCESS)
 	{
@@ -638,8 +674,8 @@ void HelloTriangleApp::createRenderPass()
 void HelloTriangleApp::createGraphicsPipeline()
 {
 	// For now, we've just got these 2 cute lil shaders
-	auto vertShaderCode = readFile("Shaders/vert.spv");
-	auto fragShaderCode = readFile("Shaders/frag.spv");
+	auto vertShaderCode = readFile("Shaders/shader.vert.spv");
+	auto fragShaderCode = readFile("Shaders/shader.frag.spv");
 
 	// Just like in opengl, we can discard the shaders
 	// once we've got our program compiled and linked
@@ -1022,6 +1058,8 @@ void HelloTriangleApp::createCommandBuffers()
 			// offset, and first instance offset
 		}
 
+		// just to remind you: we're not actually executing these yet, just
+		// recording them, numbolini
 		vkCmdEndRenderPass(this->commandBuffers[i]);
 
 		if (vkEndCommandBuffer(this->commandBuffers[i]) != VK_SUCCESS)
@@ -1029,6 +1067,160 @@ void HelloTriangleApp::createCommandBuffers()
 			throw std::runtime_error("Failed to record command buffer!");
 		}
 	}
+}
+
+void HelloTriangleApp::createSemaphores()
+{
+	// heh, you gotta do the usual "creation struct args",
+	// but at this point in time, the api just needs you
+	// to specify its type lol
+	
+	VkSemaphoreCreateInfo semInfo = {};
+	semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	if (vkCreateSemaphore(this->device, &semInfo, nullptr, this->imageAvailableSemaphore.replace()) != VK_SUCCESS ||
+		vkCreateSemaphore(this->device, &semInfo, nullptr, this->renderFinishedSemaphore.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create semaphores!");
+	}
+}
+
+void HelloTriangleApp::drawFrame()
+{
+	// Here's a brief overview of what this drawfunc will
+	// do:
+	// acquire an image in the swap chain
+	// execute the command buffer with that image as the
+	// attachment in the framebuffer
+	// return the image to the swap chain for presentation
+	// each of these events is used with only a single
+	// function call, but are executed async.
+	// the calls will return before the operations are
+	// actually finished, and their order of operations is
+	// also undefined. oh boy! this sucks because we need
+	// them to be in order... so there's 2 ways to sync it
+	// fences and semaphores. they're both objects that
+	// can be used for coordinating operations by having
+	// one operation signal, and another operation to wait
+	// for the fence/semaphore to go from the unsignaled
+	// to signaled state.
+	// the diff between fences and semaphores is that
+	// the state of fences can be seen/accessed from your
+	// program with vkWaitForFences, and semaphores can't
+	// Fences are mainly designed to sync your apps itself
+	// with the rendering operation, whereas semaphores
+	// are used to sync operations within or across
+	// command queues. so it's more appropriate here.
+
+	uint32_t imageIndex;
+	vkAcquireNextImageKHR(
+		this->device, 
+		this->swapChain, 
+		std::numeric_limits<uint64_t>::max(), 
+		this->imageAvailableSemaphore, 
+		VK_NULL_HANDLE, 
+		&imageIndex);
+	// third param specifies a timeout in ns for an image
+	// to become available using the max value of a 64 bit
+	// uint to disable the timeout
+	// next 2 params specify sync objects that are to be
+	// signaled when the presentation engine is finished
+	// using the image. 
+	// that's when we can start drawing to it! it's
+	// possible to specify a semaphore; fence, or both
+	// we're using our own semaphore
+	// the last param specifies a var to output the index
+	// of the swapchain image that has become available to
+	// us. the index refers to a VkImage in this->
+	// swapChainImages vector. we're gonna use that index
+	// to pick the right command buffer.
+
+	// submitting the command buffer
+
+	// let's config our queue submission and syncing
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphore };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	// the three params specify which semaphores to wait
+	// on before execution begins! and also in which
+	// stage(s) of the pipeline to wait. we want to wait
+	// with writing colours to the image until it's
+	// available, so we're specifying that pipeline stage
+	// here (the one that writes to the colour attachment)
+	// that means that theoretically, the implementation
+	// can already start executing our vertex shader etc.
+	// while the image isn't available yet. each entry in
+	// the waitStages array corresponds to the semaphore
+	// with the same index in pWaitSemaphores
+
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &this->commandBuffers[imageIndex];
+	// these params specify which command buffers to
+	// actually submit for execution. we should submit
+	// the command buffer that corresponds/binds to the
+	// swapchain image
+
+	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphore };
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+	// these specify which semaphores to signal once the
+	// command buffer(s) are done
+
+	if (vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't submit draw command buffer!");
+	}
+	// the last optional arg specifies a fence that will
+	// be signalled upon completion
+
+	// subpass dependencies
+	// hey idiot, remember that those subpasses in the
+	// render pass automatically take care of image layout
+	// transitions? yea, me neither. these transitions are
+	// controlled by subpass dependencies, which specify
+	// memory and exec. dependencies between subpasses
+	// we've just got one subpass right now, but the ops
+	// before and after this subpass are also implicit
+	// subpasses. There's 2 builtin dependencies that take
+	// care of the transition at the start of the render
+	// pass & at the end. But the former doesnt happen at
+	// the right time lol. that's why we have to override
+	// those implicit dependencies with our own, using
+	// vkSubpassDependency structs. head back over to
+	// this->createRenderPass();
+	// ...
+
+	// Presentation
+	// ey doe, this is the final step to getting our damn
+	// triangle on the screen, i need a pay rise mr krabs
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	// these are the semaphores to wait on before
+	// presentation can happen, just like VkSubmitInfo
+
+	VkSwapchainKHR swapChains[] = { this->swapChain };
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+
+	presentInfo.pResults = nullptr;
+	// this is optional, as you can see. lets you specify
+	// an array of VkResult to check each swap chain if
+	// you really need that. but we live dangerously
+
+	vkQueuePresentKHR(this->presentQueue, &presentInfo);
+	// oh man
+	// submits the request to present an image
+	// I ain't gonna accept your request unless you say
+	// please, you nutbag
 }
 
 bool QueueFamilyIndices::isComplete()
@@ -1041,8 +1233,16 @@ void HelloTriangleApp::loop()
 	while (!glfwWindowShouldClose(this->window))
 	{
 		glfwPollEvents();
+
+		// finally, some good hardcore action
+		this->drawFrame();
 	}
+
+	// remember y'nubhead - all the operations in that
+	// drawFrame() func are happening async'ly, so if we
+	// shut down, we need to make sure everything's
+	// cleaner than an abortion clinic
+	vkDeviceWaitIdle(this->device);
 }
 
-// a thousand SLOC, and we haven't made a gosh darn
-// triangle show up on our dinky displays
+// a thousand SLOC, and we just rendered a multi coloured triangle. amazing

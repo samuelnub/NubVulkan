@@ -1,2 +1,6 @@
-@for %%i IN (*.vert; *.tesc; *.tese; *.geom; *.frag; *.comp) DO (C:/VulkanSDK/1.0.26.0/Bin32/glslangValidator.exe -V "%%i")
+@for %%I IN (*.vert; *.tesc; *.tese; *.geom; *.frag; *.comp) DO (%VULKAN_SDK%/Bin32/glslangValidator.exe -V "%%I" -o "%%~nI%%~xI.spv")
 pause
+
+REM thanks to some guy on the internet who pointed out that the files will
+REM get over written, becuase the validator spits out filenames based on the
+REM shader stage, heh

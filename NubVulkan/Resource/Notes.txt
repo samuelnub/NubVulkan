@@ -103,3 +103,8 @@
 	as you could dispatch them multithreaded-ly (the whole reason i'm here)
 	and you could just iterate through the command buffer in 1 main thread
 	beautiful.
+
+20 Oct 2016:
+	drew the triangle lol, and again, I'm sorry future me, but I put the notes
+	in the source itself, go look there instead. It's probably more helpful
+	there too reference drawFrame();.
