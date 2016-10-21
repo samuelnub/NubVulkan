@@ -3,6 +3,28 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <array>
+#include <glm/glm.hpp>
+
+struct Vertex
+{
+	glm::vec3 pos;
+	glm::vec3 norm; // i swear its the colour data... for now
+
+	// Helper functions for this vertex class; oops, sorry, struct...
+
+	// Binding descriptions - yep! you gotta tell vulkan, so why not here?
+	static VkVertexInputBindingDescription getBindingDescription();
+
+	// Attribute descriptions - VAO's pretty much
+	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
+};
+
+const std::vector<Vertex> vertices = {
+	{ { 0.0f, -0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f } },
+	{ { 0.5f, 0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f } },
+	{ { -0.5f, 0.5f, 0.0f },{ 0.0f, 0.0f, 1.0f } }
+};
 
 const int WIDTH = 1280;
 const int HEIGHT = 720;

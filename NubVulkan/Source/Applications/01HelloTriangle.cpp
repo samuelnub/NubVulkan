@@ -706,16 +706,17 @@ void HelloTriangleApp::createGraphicsPipeline()
 	};
 
 	// Specifying vertex input
-	// Since we're idiots at the moment, we've put the
-	// vert data within the shader itself, so we can omit
-	// specifying the vertex data for now
 
 	VkPipelineVertexInputStateCreateInfo vertInputInfo = {};
 	vertInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertInputInfo.vertexBindingDescriptionCount = 0;
-	vertInputInfo.pVertexBindingDescriptions = nullptr;
-	vertInputInfo.vertexAttributeDescriptionCount = 0;
-	vertInputInfo.pVertexAttributeDescriptions = nullptr;
+
+	auto bindDesc = Vertex::getBindingDescription();
+	auto attribDesc = Vertex::getAttributeDescriptions();
+
+	vertInputInfo.vertexBindingDescriptionCount = 1;
+	vertInputInfo.pVertexBindingDescriptions = &bindDesc;
+	vertInputInfo.vertexAttributeDescriptionCount = attribDesc.size();
+	vertInputInfo.pVertexAttributeDescriptions = attribDesc.data();
 
 	// Input assembly, what kind of geometry is this?
 	// fill? line? points?

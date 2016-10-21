@@ -108,3 +108,11 @@
 	drew the triangle lol, and again, I'm sorry future me, but I put the notes
 	in the source itself, go look there instead. It's probably more helpful
 	there too reference drawFrame();.
+
+21 Oct 2016:
+	Vertex buffers! stop putting your vertices in the god damn vert shader
+	itself lol. we're gonna use the cpu-visible (your-program-visible) buffer
+	using memcpy to copy the vert data to it directly. Afterwhich, a staging
+	buffer will be used to copy the verts to high performance vram!
+	head over to the Vertex struct in the constants.h file
+	also check out the edited createGraphicsPipeline() func
