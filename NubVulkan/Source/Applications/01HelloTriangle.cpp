@@ -32,6 +32,7 @@ void HelloTriangleApp::initVulkan()
 	this->createGraphicsPipeline();
 	this->createFrameBuffers();
 	this->createCommandPool();
+	this->createVertexBuffer();
 	this->createCommandBuffers();
 	this->createSemaphores();
 }
@@ -373,6 +374,42 @@ std::vector<char> HelloTriangleApp::readFile(const std::string & fileName)
 
 	file.close();
 	return buffer; // wonderful
+}
+
+uint32_t HelloTriangleApp::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+	// first, lets query the available mem types
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(this->physicalDevice, &memProperties);
+	// this struct has 2 arrays, memoryTypes & memoryHeaps
+	// heaps are distinct mem resources like ded. VRAM
+	// and swap space in RAM (when your VRAM runs out!)
+	// right now we're just gonna care about the type, not
+	// theh heap it originates from
+	
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+	{
+		if (typeFilter & (1 << i) &&
+			(memProperties.memoryTypes[i].propertyFlags & properties) == properties
+			) // sneaky bitwise ops!
+		{
+			// the second && checks is because
+			// we're not just interested in a mem type
+			// that is suitable for the vert buffer; we
+			// need a mem type that'll write our vert data
+			// to that memory!
+			// the right memory type will have
+			// VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+			// so our cpu can write to it
+			// in the future we may need to && some more
+			// args!
+			
+			return i;
+		}
+	}
+
+	// wewlads
+	throw std::runtime_error("Couldn't find a suitable memory type! What sort of freaking computer are you using???");
 }
 
 void HelloTriangleApp::createShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule)
@@ -963,6 +1000,110 @@ void HelloTriangleApp::createCommandPool()
 	}
 }
 
+void HelloTriangleApp::createVertexBuffer()
+{
+	VkBufferCreateInfo buffInfo = {};
+	buffInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffInfo.size = sizeof(vertices[0]) * vertices.size();
+	// size in bytes, remember! not just the size()!
+
+	buffInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	// what's its purpose? well lucky for you, we answered
+	// that by specifying its gonna be used as a vert buff
+	// you can also specify others, refer to the vulkan
+	// registries and search up for the
+	// "VkBufferUsageFlagBits" enum
+
+	buffInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	// similar to the images in the swapchain, buffers can
+	// also be owned by a specific queue family, or be
+	// shared between mul. simultaneously. The buffer will
+	// only be used from the graphics queue, so we'll make
+	// it exclusive
+
+	buffInfo.flags = NULL; // optional
+	
+	if (vkCreateBuffer(this->device, &buffInfo, nullptr, this->vertexBuffer.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create vertex buffer!");
+	}
+
+	// alright, the buffer's been created... but there
+	// aint actually any memory allocated/assigned to it
+	// yet lol. first step to allocating a mem buffer is
+	// to queery its memory requirements!
+
+	VkMemoryRequirements memReqs;
+	vkGetBufferMemoryRequirements(this->device, this->vertexBuffer, &memReqs);
+	// so this struct is going to have 3 data members,
+	// size: memory size in bytes required for this buffer
+	// alignment: the offset in bytes where the buffer
+	// begins in the allocated region of memory
+	// memoryTypeBits: bit field of the memory types that
+	// are suitable for the buffer
+	// GPU's can offer different types of mem to allocate
+	// from. each mem type varies, ie allowed operations
+	// as well as performance stats. let's get that info!
+	// head over to this->findMemoryType();
+
+	// physical memory allocation for our buffer
+
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memReqs.size;
+	allocInfo.memoryTypeIndex = this->findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	if (vkAllocateMemory(this->device, &allocInfo, nullptr, this->vertexBufferMemory.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't allocate vertex buffer memory!");
+	}
+
+	// cool! now we can associate this alloc'd memory with
+	// the buffer
+	vkBindBufferMemory(this->device, this->vertexBuffer, this->vertexBufferMemory, 0);
+	// ps: that last param is the offset within the region
+	// of memory. since the mem is alloc'd specifically
+	// for this vert buffer, we're havin it be 0, hurr...
+	// but if you want it offsetted, it needs to be in
+	// multiples of memReqs.alignment
+
+	// filling the vertex buffer
+	// time to copy that vert data over to the freshly
+	// refurbished vram allocated memory!
+	// aka Memory-Mapped I/O
+	
+	void *data;
+	vkMapMemory(this->device, this->vertexBufferMemory, 0, buffInfo.size, 0, &data);
+	// this func lets us access a region of the specified
+	// memory resource (defined by the offset and size)
+	// (which is 0 and buffInfo.size respectively). You
+	// can also do VK_WHOLE_SIZE to map all the memory
+	// the second last param is the flags, which dont
+	// exist yet in this API version lol
+
+	// let's simply memcpy it now!
+	memcpy(data, vertices.data(), (size_t)buffInfo.size);
+	vkUnmapMemory(this->device, this->vertexBufferMemory);
+	// we don't need to look at that disgrace anymore!
+	// sadly, the driver might not copy it immediately
+	// eg cause of caching. you can deal with this & other
+	// problems by using a memory heap that is
+	// host coherent, indicated with
+	// VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+	// or, you could call vkFlushMappedMemoryRanges
+	// after writing to the mapped memory, and then call
+	// vkInvalidateMappedMemoryRanges before reading from
+	// mapped memory
+	// well, we went for the former option, which ensures
+	// that the mapped memory always matches the contents
+	// of the alloc'd memory. (may hit performance a bit)
+	
+	// Binding the vertex buffer!
+
+	// ooh we're gonna record it in our command buffer!
+	// head on over to this->createCommandBuffers();
+}
+
 void HelloTriangleApp::createCommandBuffers()
 {
 	this->commandBuffers.resize(this->swapChainFramebuffers.size());
@@ -1042,13 +1183,30 @@ void HelloTriangleApp::createCommandBuffers()
 			// the pipeline object is a compute or
 			// graphics pipeline
 
+			// Heyo! I'm visiting from
+			// this->createVertexBuffer();!
+			VkBuffer vertBuffers[] = { this->vertexBuffer };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertBuffers, offsets);
+			// that vkCmd func is used to bind vertex
+			// buffers to bindings. Like the one we set up
+			// previously. after that first param, the 
+			// next 2 specify the offset & num of bindings
+			// we're going to specify vertex buffers for.
+			// the last 2 params specify the array of
+			// vert buffers to bind and the byte offsets
+			// to initially read from. also, down there,
+			// vkCmdDraw should be changed by now to pass
+			// the num of vertices in the buffer instead
+			// of our magical 3 lol
+
 			// the moment you've been waiting for,
 			// duh, duh luh duh duh duh, duh luh duh duh
 			// duh duh duh duh duh duh duh! duh dillie duh
 			// duh dillie duh dillie duh di di duh
 			// *breath*
 
-			vkCmdDraw(this->commandBuffers[i], 3, 1, 0, 0);
+			vkCmdDraw(this->commandBuffers[i], vertices.size(), 1, 0, 0);
 			// oh
 			// well, since we've done so much just now -
 			// specifying all the parameters for the

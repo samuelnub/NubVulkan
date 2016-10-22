@@ -116,3 +116,12 @@
 	buffer will be used to copy the verts to high performance vram!
 	head over to the Vertex struct in the constants.h file
 	also check out the edited createGraphicsPipeline() func
+
+22 Oct 2016:
+	vert buffer creation!
+	buffers in vulkan are regions of memory that's used for storing generic
+	bullcrap that you need that can be read by the GPU. unlike vulkan objects
+	we've been seeing so far, buffers don't automatically allocate memory for
+	themselves :(((( we're in control now
+	reference our createVertexBuffer();
+	crepé! didn't do the swapchain recreation one :( TODO!

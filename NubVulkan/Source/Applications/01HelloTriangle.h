@@ -55,6 +55,7 @@ private:
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 	static std::vector<char> readFile(const std::string &fileName);
+	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	void createShaderModule(const std::vector<char> &code, VDeleter<VkShaderModule> &shaderModule);
 	void createSwapChain();
 	void createInstance();
@@ -64,6 +65,7 @@ private:
 	void createGraphicsPipeline();
 	void createFrameBuffers();
 	void createCommandPool();
+	void createVertexBuffer();
 	void createCommandBuffers();
 	void createSemaphores();
 	void drawFrame();
@@ -97,6 +99,10 @@ private:
 	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
 	// Each one holds record of our commands. Auto free'd when pool is gone
 	std::vector<VkCommandBuffer> commandBuffers;
+
+	// Needs to be in this order! memory will free once buff is destroyed
+	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
 
 	VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
 	VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
