@@ -14,9 +14,17 @@ void HelloTriangleApp::initWindow()
 	// Since glfw was built for OGL (kinda in the name)
 	// We gotta specify to not create an OGL context
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 	this->window = glfwCreateWindow(WIDTH, HEIGHT, "NubVulkan", nullptr, nullptr);
+
+	// Hooooo! i'm here from recreateSwapChain()!
+	glfwSetWindowUserPointer(this->window, this);
+	// woah, you can set your own custom pointer for your
+	// specified window! let's give it the "this" context
+	// (it's initially just NULL) we'll use this to point
+	// to our static member func
+
+	glfwSetWindowSizeCallback(this->window, HelloTriangleApp::onWindowResized);
 }
 
 void HelloTriangleApp::initVulkan()
@@ -389,9 +397,7 @@ uint32_t HelloTriangleApp::findMemoryType(uint32_t typeFilter, VkMemoryPropertyF
 	
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
 	{
-		if (typeFilter & (1 << i) &&
-			(memProperties.memoryTypes[i].propertyFlags & properties) == properties
-			) // sneaky bitwise ops!
+		if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) // sneaky bitwise ops!
 		{
 			// the second && checks is because
 			// we're not just interested in a mem type
@@ -410,6 +416,20 @@ uint32_t HelloTriangleApp::findMemoryType(uint32_t typeFilter, VkMemoryPropertyF
 
 	// wewlads
 	throw std::runtime_error("Couldn't find a suitable memory type! What sort of freaking computer are you using???");
+}
+
+void HelloTriangleApp::onWindowResized(GLFWwindow * window, int width, int height)
+{
+	if (width == 0 || height == 0)
+	{
+		return;
+	}
+
+	HelloTriangleApp *app = reinterpret_cast<HelloTriangleApp *>(glfwGetWindowUserPointer(window));
+	// so _that's_ how you reinterpret_cast... cool beans
+	// man, that gave me a false sense of intelligence
+
+	app->recreateSwapChain();
 }
 
 void HelloTriangleApp::createShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule)
@@ -494,10 +514,23 @@ void HelloTriangleApp::createSwapChain()
 	// the entire swapchain, whoo boy, covered later
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	if (vkCreateSwapchainKHR(this->device, &createInfo, nullptr, this->swapChain.replace()) != VK_SUCCESS)
+	// Hello higher order beings of the past! I have come
+	// from the recreateSwapChain() function to bring you
+	// new additions!
+	VkSwapchainKHR oldSwapChain = this->swapChain;
+	createInfo.oldSwapchain = oldSwapChain;
+
+	VkSwapchainKHR newSwapChain;
+	// This should have the newSwapChain as the last param
+	if (vkCreateSwapchainKHR(this->device, &createInfo, nullptr, &newSwapChain) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Couldn't create a swap chain!");
 	}
+
+	// Here too! this is new too
+	this->swapChain = newSwapChain;
+	// This will destroy the old swapchain and replace the
+	// handle with the handle of the new one!
 
 	vkGetSwapchainImagesKHR(this->device, this->swapChain, &imageCount, nullptr);
 	swapChainImages.resize(imageCount);
@@ -1020,8 +1053,7 @@ void HelloTriangleApp::createVertexBuffer()
 	// shared between mul. simultaneously. The buffer will
 	// only be used from the graphics queue, so we'll make
 	// it exclusive
-
-	buffInfo.flags = NULL; // optional
+	// there's an optional flags param too
 	
 	if (vkCreateBuffer(this->device, &buffInfo, nullptr, this->vertexBuffer.replace()) != VK_SUCCESS)
 	{
@@ -1106,6 +1138,15 @@ void HelloTriangleApp::createVertexBuffer()
 
 void HelloTriangleApp::createCommandBuffers()
 {
+	// Howdy fellow kids! I'm here from recreateSwapChain,
+	// and here i'm just checking if our cmd buff vec
+	// already has previous buffers; if so, let's get rid/
+	// free them first!
+	if (this->commandBuffers.size() > 0)
+	{
+		vkFreeCommandBuffers(this->device, this->commandPool, this->commandBuffers.size(), this->commandBuffers.data());
+	}
+
 	this->commandBuffers.resize(this->swapChainFramebuffers.size());
 
 	VkCommandBufferAllocateInfo allocInfo = {};
@@ -1155,7 +1196,7 @@ void HelloTriangleApp::createCommandBuffers()
 		rendPassInfo.renderArea.offset = { 0,0 }; // ey
 		rendPassInfo.renderArea.extent = this->swapChainExtent;
 
-		VkClearValue clearCol = { 0.1f, 0.1f, 0.1f, 1.0f };
+		VkClearValue clearCol = { 0.5f, 0.5f, 0.5f, 1.0f };
 		rendPassInfo.clearValueCount = 1;
 		rendPassInfo.pClearValues = &clearCol;
 
@@ -1271,8 +1312,11 @@ void HelloTriangleApp::drawFrame()
 	// are used to sync operations within or across
 	// command queues. so it's more appropriate here.
 
+	// Hey, I'm here from the future! (recreateSwapChain)
+	// let's aquire the return value of vkAcNextImgKHR
+
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR(
+	auto result = vkAcquireNextImageKHR(
 		this->device, 
 		this->swapChain, 
 		std::numeric_limits<uint64_t>::max(), 
@@ -1293,6 +1337,16 @@ void HelloTriangleApp::drawFrame()
 	// us. the index refers to a VkImage in this->
 	// swapChainImages vector. we're gonna use that index
 	// to pick the right command buffer.
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		this->recreateSwapChain();
+		return;
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
+		throw std::runtime_error("Couldn't acquire a swapchain image!");
+	}
 
 	// submitting the command buffer
 
@@ -1375,11 +1429,45 @@ void HelloTriangleApp::drawFrame()
 	// an array of VkResult to check each swap chain if
 	// you really need that. but we live dangerously
 
-	vkQueuePresentKHR(this->presentQueue, &presentInfo);
+	// Poof! I'm also here from recreateSwapChain,
+	// lets get that return val too!
+
+	result = vkQueuePresentKHR(this->presentQueue, &presentInfo);
 	// oh man
 	// submits the request to present an image
 	// I ain't gonna accept your request unless you say
 	// please, you nutbag
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+	{
+		this->recreateSwapChain();
+	}
+	else if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't present swapchain image!");
+	}
+}
+
+void HelloTriangleApp::recreateSwapChain()
+{
+	vkDeviceWaitIdle(device);
+	// we shouldnt touch resources that may still be used
+
+	this->createSwapChain();
+	this->createImageViews();
+	this->createRenderPass();
+	this->createGraphicsPipeline();
+	this->createFrameBuffers();
+	this->createCommandBuffers();
+
+	// the really handy VDeleter implements proper RAII
+	// so, most of the funcs will work A-OK for re-
+	// creation & will auto clean up older objects. But,
+	// this->createSwapChain(); & 
+	// this->createCommandBuffers(); need a bit of editing
+	// woosh!
+	// also, head over to our edited initWindow(), where
+	// we set up our static onWindowResize() callback
 }
 
 bool QueueFamilyIndices::isComplete()

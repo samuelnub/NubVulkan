@@ -125,3 +125,19 @@
 	themselves :(((( we're in control now
 	reference our createVertexBuffer();
 	crepé! didn't do the swapchain recreation one :( TODO!
+
+23 Oct 2016:
+	recreateSwapChain() and onWindowResized() to call it, which is set up
+	in initWindow()
+	it's possible for vk to tell us that the swapchain isn't compatible
+	anymore... during presentation :o, the vkAcquireNextImageKHR and
+	vkQueuePresentKHR funcs can return values to signify this
+	VK_ERROR_OUT_OF_DATE_KHR: the swap chain became incompatible with the
+	surface and can't be used for rendering anymore :(
+	VK_SUBOPTIMAL_KHR: simply unoptimal (can still be used), eg if the
+	platform wants to fullscreen the window
+	swapchain recreation/resizing sorted, but still a black screen :(
+	ohhhhh, i turned the background clear colour to a lighter grey, and then
+	i saw the triangle... it's just black. nice one me
+	fixed: binding for vertex attribute 1 (the colour) specified a binding
+	of 1 instead of 0

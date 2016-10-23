@@ -56,6 +56,7 @@ private:
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 	static std::vector<char> readFile(const std::string &fileName);
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+	static void onWindowResized(GLFWwindow *window, int width, int height);
 	void createShaderModule(const std::vector<char> &code, VDeleter<VkShaderModule> &shaderModule);
 	void createSwapChain();
 	void createInstance();
@@ -69,18 +70,20 @@ private:
 	void createCommandBuffers();
 	void createSemaphores();
 	void drawFrame();
+	void recreateSwapChain();
 	void loop();
 
 	GLFWwindow *window;
 	
 	VDeleter<VkInstance> instance{ vkDestroyInstance };
 	VDeleter<VkDebugReportCallbackEXT> callback{instance, DestroyDebugReportCallbackEXT};
-	VDeleter<VkDevice> device{ vkDestroyDevice };
+	VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
 	
 	// Automatically deallocated/deleted upon VkInstance deletion, yay
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VDeleter<VkDevice> device{ vkDestroyDevice };
+
 	VkQueue graphicsQueue;
-	VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
 	VkQueue presentQueue;
 
 	VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
@@ -88,22 +91,22 @@ private:
 	std::vector<VkImage> swapChainImages;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
-
 	std::vector<VDeleter<VkImageView>> swapChainImageViews;
+	std::vector<VDeleter<VkFramebuffer>> swapChainFramebuffers;
 
 	VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
 	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
 	VDeleter<VkPipeline> graphicsPipeline{ device, vkDestroyPipeline };
-	std::vector<VDeleter<VkFramebuffer>> swapChainFramebuffers;
 
 	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
-	// Each one holds record of our commands. Auto free'd when pool is gone
-	std::vector<VkCommandBuffer> commandBuffers;
-
+	
 	// Needs to be in this order! memory will free once buff is destroyed
 	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
-
+	
+	// Each one holds record of our commands. Auto free'd when pool is gone
+	std::vector<VkCommandBuffer> commandBuffers;
+	
 	VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
 	VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
 
