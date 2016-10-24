@@ -1033,14 +1033,20 @@ void HelloTriangleApp::createCommandPool()
 	}
 }
 
-void HelloTriangleApp::createVertexBuffer()
+void HelloTriangleApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkBuffer>& buff, VDeleter<VkDeviceMemory>& buffMemory)
 {
+	// Ey! abstracting buffer creation! Optimally though,
+	// you shouldn't be malloc'ing gpu memory in little
+	// chunks, instead allocate a buttload first, and use
+	// those handy buffer offsets to put your little buffs
+	// inside! search up on vk memory management
+	
 	VkBufferCreateInfo buffInfo = {};
 	buffInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffInfo.size = sizeof(vertices[0]) * vertices.size();
+	buffInfo.size = size;
 	// size in bytes, remember! not just the size()!
 
-	buffInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	buffInfo.usage = usage;
 	// what's its purpose? well lucky for you, we answered
 	// that by specifying its gonna be used as a vert buff
 	// you can also specify others, refer to the vulkan
@@ -1054,10 +1060,10 @@ void HelloTriangleApp::createVertexBuffer()
 	// only be used from the graphics queue, so we'll make
 	// it exclusive
 	// there's an optional flags param too
-	
-	if (vkCreateBuffer(this->device, &buffInfo, nullptr, this->vertexBuffer.replace()) != VK_SUCCESS)
+
+	if (vkCreateBuffer(this->device, &buffInfo, nullptr, buff.replace()) != VK_SUCCESS)
 	{
-		throw std::runtime_error("Couldn't create vertex buffer!");
+		throw std::runtime_error("Couldn't create buffer!");
 	}
 
 	// alright, the buffer's been created... but there
@@ -1066,7 +1072,7 @@ void HelloTriangleApp::createVertexBuffer()
 	// to queery its memory requirements!
 
 	VkMemoryRequirements memReqs;
-	vkGetBufferMemoryRequirements(this->device, this->vertexBuffer, &memReqs);
+	vkGetBufferMemoryRequirements(this->device, buff, &memReqs);
 	// so this struct is going to have 3 data members,
 	// size: memory size in bytes required for this buffer
 	// alignment: the offset in bytes where the buffer
@@ -1083,16 +1089,16 @@ void HelloTriangleApp::createVertexBuffer()
 	VkMemoryAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocInfo.allocationSize = memReqs.size;
-	allocInfo.memoryTypeIndex = this->findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	allocInfo.memoryTypeIndex = this->findMemoryType(memReqs.memoryTypeBits, properties);
 
-	if (vkAllocateMemory(this->device, &allocInfo, nullptr, this->vertexBufferMemory.replace()) != VK_SUCCESS)
+	if (vkAllocateMemory(this->device, &allocInfo, nullptr, buffMemory.replace()) != VK_SUCCESS)
 	{
-		throw std::runtime_error("Couldn't allocate vertex buffer memory!");
+		throw std::runtime_error("Couldn't create buffer memory!");
 	}
 
 	// cool! now we can associate this alloc'd memory with
 	// the buffer
-	vkBindBufferMemory(this->device, this->vertexBuffer, this->vertexBufferMemory, 0);
+	vkBindBufferMemory(this->device, buff, buffMemory, 0);
 	// ps: that last param is the offset within the region
 	// of memory. since the mem is alloc'd specifically
 	// for this vert buffer, we're havin it be 0, hurr...
@@ -1103,9 +1109,91 @@ void HelloTriangleApp::createVertexBuffer()
 	// time to copy that vert data over to the freshly
 	// refurbished vram allocated memory!
 	// aka Memory-Mapped I/O
-	
+
+
+
+}
+
+void HelloTriangleApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+{
+	// remember - mem transfer ops are exec. in command
+	// buffers! just like drawing cmds. therefore we gotta
+	// first allocate a temporary command buff... oh man
+	// you might wanna create separate cmd pools for these
+	// small/short operations, cause the implementation 
+	// may be able to apply optimizations in terms of
+	// alloc'ing. You could use
+	// VK_COMMAND_POOL_CREATE_TRANSIENT_BIT during
+	// cmd pool creation, fyi
+
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = this->commandPool;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer cmdBuff;
+	vkAllocateCommandBuffers(this->device, &allocInfo, &cmdBuff);
+
+	// immediately start recording commands!
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	// that onetimesubmitbit flag just tells the driver
+	// our intent
+
+	vkBeginCommandBuffer(cmdBuff, &beginInfo);
+
+	VkBufferCopy copyRegion = {};
+	copyRegion.srcOffset = 0; // optional
+	copyRegion.dstOffset = 0; // optional
+	copyRegion.size = size;
+	vkCmdCopyBuffer(cmdBuff, srcBuffer, dstBuffer, 1, &copyRegion);
+	// the contents of the buff are transferred via that
+	// cmd. it takes the src and dest buffs as args, and
+	// an array of regions to copy. the regions are
+	// defined VkBufferCopy structs like this and consist
+	// of the offsets of the src and dst and size. you
+	// cant specify VK_WHOLE_SIZE here :(, unlike
+	// vkMapMemory
+
+	vkEndCommandBuffer(cmdBuff);
+	// we're done recording here, so lets run it
+	// immediately
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuff;
+
+	vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(this->graphicsQueue);
+	// unlike draw commands, there isnt a need for fences
+	// or semaphores to wait on anything. we just gotta
+	// execute! but we could use fences to schedule multi
+	// simultaneous transfers! coolio
+
+	vkFreeCommandBuffers(this->device, this->commandPool, 1, &cmdBuff);
+	// dont forget to clean up after yourself!
+}
+
+void HelloTriangleApp::createVertexBuffer()
+{
+	VkDeviceSize buffSize = sizeof(vertices[0]) * vertices.size();
+
+	// woosh! we're gonna only use a host-visible buffer
+	// as a temporary buffer and use a device local one as
+	// the actual vertex buffer
+	VDeleter<VkBuffer> stagingBuff{ this->device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> stagingBuffMemory{ this->device, vkFreeMemory };
+
+	// just using the staging buffer first!
+
+	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuff, stagingBuffMemory);
+
 	void *data;
-	vkMapMemory(this->device, this->vertexBufferMemory, 0, buffInfo.size, 0, &data);
+	vkMapMemory(this->device, stagingBuffMemory, 0, buffSize, 0, &data);
 	// this func lets us access a region of the specified
 	// memory resource (defined by the offset and size)
 	// (which is 0 and buffInfo.size respectively). You
@@ -1114,8 +1202,8 @@ void HelloTriangleApp::createVertexBuffer()
 	// exist yet in this API version lol
 
 	// let's simply memcpy it now!
-	memcpy(data, vertices.data(), (size_t)buffInfo.size);
-	vkUnmapMemory(this->device, this->vertexBufferMemory);
+	memcpy(data, vertices.data(), (size_t)buffSize);
+	vkUnmapMemory(this->device, stagingBuffMemory);
 	// we don't need to look at that disgrace anymore!
 	// sadly, the driver might not copy it immediately
 	// eg cause of caching. you can deal with this & other
@@ -1134,6 +1222,27 @@ void HelloTriangleApp::createVertexBuffer()
 
 	// ooh we're gonna record it in our command buffer!
 	// head on over to this->createCommandBuffers();
+
+	// ... after the staging buffer, here's the actual one
+
+	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->vertexBuffer, this->vertexBufferMemory);
+	// we're now using a new staging buffer with staging
+	// buffer memory for mapping & copying the vert data.
+	// _TRANSFER_SRC_BIT - the buff can be used as source
+	// in a mem transfer op
+	// _TRANSFER_DST_BIT - the buff can be used as dest
+	// in a mem transfer op
+
+	// this->vertexBuffer is now allocated from a memory
+	// type that is device local! but, this means that we
+	// cant use vkMapMemory. but, we can copy data from
+	// the stagingBuffer to this->vertexBuffer. we have to
+	// indicate that we want to do this by specifying the
+	// transfer source flag for the staging buffer and the
+	// transfer dest flag for this->vertexBuffer, along w/
+	// the vertex buffer usage flag
+
+	this->copyBuffer(stagingBuff, this->vertexBuffer, buffSize);
 }
 
 void HelloTriangleApp::createCommandBuffers()

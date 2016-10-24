@@ -66,6 +66,8 @@ private:
 	void createGraphicsPipeline();
 	void createFrameBuffers();
 	void createCommandPool();
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkBuffer> &buff, VDeleter<VkDeviceMemory> &buffMemory);
+	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void createVertexBuffer();
 	void createCommandBuffers();
 	void createSemaphores();

@@ -141,3 +141,14 @@
 	i saw the triangle... it's just black. nice one me
 	fixed: binding for vertex attribute 1 (the colour) specified a binding
 	of 1 instead of 0
+
+24 Oct 2016:
+	Staging buffer! the vert buffer we've got ATM works... but isnt the
+	"usual practice" lol. The memory type of that vert buff allows our CPU to
+	access it. it may not be the optimal mem type for the gpu itself to read
+	from. the best type has the VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT flag and
+	is usually not accessible by the CPU on dedicated cards. today, we're gon
+	make 2 vert buffers - one staging buffer in cpu accessible memory to
+	upload upload the data from the vert array to... and the final vert buff
+	in device memory (our gpu in this case). then we'll use a buffer copy cmd
+	to move the data from the staging buff to the actual vert buff. 'aight
