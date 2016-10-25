@@ -152,3 +152,7 @@
 	upload upload the data from the vert array to... and the final vert buff
 	in device memory (our gpu in this case). then we'll use a buffer copy cmd
 	to move the data from the staging buff to the actual vert buff. 'aight
+
+25 Oct 2016:
+	Index buffer!
+	chemistry revision :(

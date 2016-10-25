@@ -41,6 +41,7 @@ void HelloTriangleApp::initVulkan()
 	this->createFrameBuffers();
 	this->createCommandPool();
 	this->createVertexBuffer();
+	this->createIndexBuffer();
 	this->createCommandBuffers();
 	this->createSemaphores();
 }
@@ -1243,6 +1244,11 @@ void HelloTriangleApp::createVertexBuffer()
 	// the vertex buffer usage flag
 
 	this->copyBuffer(stagingBuff, this->vertexBuffer, buffSize);
+}
+
+void HelloTriangleApp::createIndexBuffer()
+{
+	// TODO
 }
 
 void HelloTriangleApp::createCommandBuffers()

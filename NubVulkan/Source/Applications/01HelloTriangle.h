@@ -69,6 +69,7 @@ private:
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkBuffer> &buff, VDeleter<VkDeviceMemory> &buffMemory);
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void createVertexBuffer();
+	void createIndexBuffer();
 	void createCommandBuffers();
 	void createSemaphores();
 	void drawFrame();
@@ -105,6 +106,8 @@ private:
 	// Needs to be in this order! memory will free once buff is destroyed
 	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
+	VDeleter<VkBuffer> indexbuffer{ device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> indexBufferMemory{ device, vkFreeMemory };
 	
 	// Each one holds record of our commands. Auto free'd when pool is gone
 	std::vector<VkCommandBuffer> commandBuffers;
