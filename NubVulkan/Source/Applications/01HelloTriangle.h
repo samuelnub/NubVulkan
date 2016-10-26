@@ -106,7 +106,7 @@ private:
 	// Needs to be in this order! memory will free once buff is destroyed
 	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
-	VDeleter<VkBuffer> indexbuffer{ device, vkDestroyBuffer };
+	VDeleter<VkBuffer> indexBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> indexBufferMemory{ device, vkFreeMemory };
 	
 	// Each one holds record of our commands. Auto free'd when pool is gone

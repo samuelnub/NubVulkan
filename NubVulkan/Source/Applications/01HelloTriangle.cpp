@@ -1248,7 +1248,31 @@ void HelloTriangleApp::createVertexBuffer()
 
 void HelloTriangleApp::createIndexBuffer()
 {
-	// TODO
+	VkDeviceSize buffSize = sizeof(indices[0]) * indices.size();
+
+	// Pretty similar to making the vert buffer!
+	// Let's make a staging buff first
+
+	VDeleter<VkBuffer> stagingBuff{ this->device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> stagingBuffMem{ this->device, vkFreeMemory };
+	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuff, stagingBuffMem);
+
+	void *data;
+	vkMapMemory(this->device, stagingBuffMem, 0, buffSize, 0, &data);
+	memcpy(data, indices.data(), (size_t)buffSize);
+	vkUnmapMemory(this->device, stagingBuffMem);
+
+	// just like the vert buffer this is the real gpu buff
+	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->indexBuffer, this->indexBufferMemory);
+	// note: look at the INDEX_BUFFER_BIT property
+	// instead of vert! coolio
+
+	this->copyBuffer(stagingBuff, this->indexBuffer, buffSize);
+	// dont forget to actually copy the staging buff over!
+
+	// now just head over to this->createCommandBuffers();
+	// to bind this newly alloc'd index buffer!
+
 }
 
 void HelloTriangleApp::createCommandBuffers()
@@ -1356,13 +1380,17 @@ void HelloTriangleApp::createCommandBuffers()
 			// the num of vertices in the buffer instead
 			// of our magical 3 lol
 
+			// Hey! I'm from the future! here to bind the
+			// index buffer as well!
+			vkCmdBindIndexBuffer(this->commandBuffers[i], this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
 			// the moment you've been waiting for,
 			// duh, duh luh duh duh duh, duh luh duh duh
 			// duh duh duh duh duh duh duh! duh dillie duh
 			// duh dillie duh dillie duh di di duh
 			// *breath*
 
-			vkCmdDraw(this->commandBuffers[i], vertices.size(), 1, 0, 0);
+			//vkCmdDraw(this->commandBuffers[i], vertices.size(), 1, 0, 0);
 			// oh
 			// well, since we've done so much just now -
 			// specifying all the parameters for the
@@ -1371,6 +1399,12 @@ void HelloTriangleApp::createCommandBuffers()
 			// those params by the way; are specifying the
 			// vertex count, instance count, first vert
 			// offset, and first instance offset
+
+			// we're drawing an indexed version now!
+			vkCmdDrawIndexed(this->commandBuffers[i], indices.size(), 1, 0, 0, 0);
+			// just 1 instance, offset of 0 to begin with,
+			// an offset of 0 per index, and an offset of
+			// 0 for instancing, which wont be used atm
 		}
 
 		// just to remind you: we're not actually executing these yet, just

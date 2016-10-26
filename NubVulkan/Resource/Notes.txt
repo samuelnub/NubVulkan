@@ -156,3 +156,7 @@
 25 Oct 2016:
 	Index buffer!
 	chemistry revision :(
+
+26 Oct 2016:
+	finished up index buffer alloc'ing and binding
+	if you want to be efficient, make 1 buffer for both vert data and indices
