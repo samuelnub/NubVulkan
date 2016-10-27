@@ -160,3 +160,29 @@
 26 Oct 2016:
 	finished up index buffer alloc'ing and binding
 	if you want to be efficient, make 1 buffer for both vert data and indices
+
+27 Oct 2016:
+	Uniform buffers!
+	so, we can pass around stuff like vertices and indices in good ol' buffers
+	but what about global variables like specularity multipliers and stuff?
+	we could put them as vert data, but then it'd be a waste of dupe memory,
+	and it would require us to update the whole buffer each time theres a
+	transformation change :/
+	so we use Resource Descriptors! a descriptor is a way for shaders to
+	freely access resources like buffs and images. We're gonna set up a buffer
+	that contains the transformation matrices and have the vertex shader
+	access them through a descriptor! neat'o
+	Uage of these descriptors requires these 3 points:
+	- specify a descriptor layout during pipeline creation
+	- alloc a descriptor set from a descriptor pool
+	- bind the descriptor set during rendering
+	A descriptor layout tells ya the types of resources that are gonna be
+	accessed by the pipline, just like how a render pass specifies the types
+	of attachments thatll be accessed. A descriptor Set specifies the actual
+	buffer or image resources that will be bound to these descriptors. just
+	like how a framebuff specifies the image views to bind to render pass 
+	attachments. The descriptor is then bound for the drawing commands just
+	like vert and frame buffers!
+	HEYO, we're gonna move onto three dimensional shiz now, and you know what
+	that means? yea, an MVP matrix
+	there's many types of descriptors, but we're gonna just use UBO's today
