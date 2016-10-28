@@ -1,6 +1,15 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+// our UBO location
+// binding is like layout, but for attributes
+layout(binding = 0) uniform UniformBufferObject
+{
+	mat4 model;
+	mat4 view;
+	mat4 proj;
+}ubo;
+
 // our vertex attributes and their respective locations
 // unlike the tutorial, I'm gonna use a vec3 for position
 layout(location = 0) in vec3 inPosition;
@@ -15,6 +24,6 @@ out gl_PerVertex
 
 void main()
 {
-	gl_Position = vec4(inPosition, 1.0);
+	gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
 	fragColor = inColor;
 }

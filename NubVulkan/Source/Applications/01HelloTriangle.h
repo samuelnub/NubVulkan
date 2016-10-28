@@ -63,6 +63,7 @@ private:
 	void createSurface();
 	void createImageViews();
 	void createRenderPass();
+	void createDescriptorSetLayout();
 	void createGraphicsPipeline();
 	void createFrameBuffers();
 	void createCommandPool();
@@ -96,6 +97,9 @@ private:
 	VkExtent2D swapChainExtent;
 	std::vector<VDeleter<VkImageView>> swapChainImageViews;
 	std::vector<VDeleter<VkFramebuffer>> swapChainFramebuffers;
+
+	// must be before pipelineLayout for proper RAII!
+	VDeleter<VkDescriptorSetLayout> descriptorSetLayout{ device, vkDestroyDescriptorSetLayout };
 
 	VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
 	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };

@@ -186,3 +186,6 @@
 	HEYO, we're gonna move onto three dimensional shiz now, and you know what
 	that means? yea, an MVP matrix
 	there's many types of descriptors, but we're gonna just use UBO's today
+
+28 Oct 2016:
+	busy :(

@@ -37,6 +37,7 @@ void HelloTriangleApp::initVulkan()
 	this->createSwapChain();
 	this->createImageViews();
 	this->createRenderPass();
+	this->createDescriptorSetLayout();
 	this->createGraphicsPipeline();
 	this->createFrameBuffers();
 	this->createCommandPool();
@@ -740,6 +741,37 @@ void HelloTriangleApp::createRenderPass()
 	{
 		throw std::runtime_error("Couldn't create render pass!");
 	}
+}
+
+void HelloTriangleApp::createDescriptorSetLayout()
+{
+	// This is just the _set_ of descriptors!
+	VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+	uboLayoutBinding.binding = 0;
+	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uboLayoutBinding.descriptorCount = 1;
+	// first 2 params specify the binding used in shader
+	// just a single struct object, so 1
+
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	// we need to specify whcich shader stages the desc.
+	// is gonna be referrenced. you could | combos or use
+	// VK_SHADER_STAGE_ALL_GRAPHICS
+
+	uboLayoutBinding.pImmutableSamplers = nullptr; // optional
+	// Only used for image sampling related descriptors.
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings = &uboLayoutBinding;
+
+	if (vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, this->descriptorSetLayout.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create descriptor set layout!");
+	}
+
+	// TODO: uniform buff in another func
 }
 
 void HelloTriangleApp::createGraphicsPipeline()
