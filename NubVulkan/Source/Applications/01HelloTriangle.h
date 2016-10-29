@@ -15,6 +15,10 @@
 #include <algorithm>
 #include <fstream>
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 struct QueueFamilyIndices
 {
 	int graphicsFamily = -1;
@@ -71,8 +75,10 @@ private:
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void createVertexBuffer();
 	void createIndexBuffer();
+	void createUniformBuffer();
 	void createCommandBuffers();
 	void createSemaphores();
+	void updateUniformBuffer();
 	void drawFrame();
 	void recreateSwapChain();
 	void loop();
@@ -112,6 +118,13 @@ private:
 	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
 	VDeleter<VkBuffer> indexBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> indexBufferMemory{ device, vkFreeMemory };
+
+	// The staging buffs need to stay around cause we'll be updating it
+	// every frame
+	VDeleter<VkBuffer> uniformStagingBuffer{ device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> uniformStagingBufferMemory{ device, vkFreeMemory };
+	VDeleter<VkBuffer> uniformBuffer{ device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> uniformBufferMemory{ device, vkFreeMemory };
 	
 	// Each one holds record of our commands. Auto free'd when pool is gone
 	std::vector<VkCommandBuffer> commandBuffers;

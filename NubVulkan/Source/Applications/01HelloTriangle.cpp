@@ -43,6 +43,7 @@ void HelloTriangleApp::initVulkan()
 	this->createCommandPool();
 	this->createVertexBuffer();
 	this->createIndexBuffer();
+	this->createUniformBuffer();
 	this->createCommandBuffers();
 	this->createSemaphores();
 }
@@ -1304,7 +1305,19 @@ void HelloTriangleApp::createIndexBuffer()
 
 	// now just head over to this->createCommandBuffers();
 	// to bind this newly alloc'd index buffer!
+}
 
+void HelloTriangleApp::createUniformBuffer()
+{
+	VkDeviceSize buffSize = sizeof(UniformBufferObject);
+
+	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, this->uniformStagingBuffer, this->uniformStagingBufferMemory);
+
+	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->uniformBuffer, this->uniformBufferMemory);
+	//Standard stuff!
+
+	// Head off to this->updateUniformBuffer() which is
+	// gonna be called in the main loop!
 }
 
 void HelloTriangleApp::createCommandBuffers()
@@ -1464,6 +1477,36 @@ void HelloTriangleApp::createSemaphores()
 	{
 		throw std::runtime_error("Couldn't create semaphores!");
 	}
+}
+
+void HelloTriangleApp::updateUniformBuffer()
+{
+	// Updated each frame!
+	static auto startTime = std::chrono::high_resolution_clock::now();
+
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
+	// oh, so that's how to duration cast
+
+	// This is where we define our MVP matrices!
+	UniformBufferObject ubo = {};
+	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = glm::perspective(glm::radians(45.0f), this->swapChainExtent.width / (float)this->swapChainExtent.height, 0.1f, 1000.0f);
+
+	// right then. GLM was designed for opengl, and VK has
+	// inverted Y clip coords
+	ubo.proj[1][1] *= -1;
+
+	// Passing it to vulkan! not very efficient though!
+	void *data;
+	vkMapMemory(this->device, this->uniformStagingBufferMemory, 0, sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(this->device, this->uniformStagingBufferMemory);
+
+	this->copyBuffer(this->uniformStagingBuffer, this->uniformBuffer, sizeof(ubo));
+	// If you want per-frame uploading of data, try using
+	// Push Constants. may cover later :(
 }
 
 void HelloTriangleApp::drawFrame()
@@ -1662,6 +1705,7 @@ void HelloTriangleApp::loop()
 	{
 		glfwPollEvents();
 
+		this->updateUniformBuffer();
 		// finally, some good hardcore action
 		this->drawFrame();
 	}

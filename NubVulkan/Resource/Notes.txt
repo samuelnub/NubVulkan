@@ -189,3 +189,8 @@
 
 28 Oct 2016:
 	busy :(
+
+29 Oct 2016:
+	happy birthday bob ross'o
+	finished up ubo buffer creation and memcpy'ing, but havent done descriptor
+	pools and sets yet
