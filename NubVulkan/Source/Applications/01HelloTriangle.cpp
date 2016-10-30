@@ -44,6 +44,8 @@ void HelloTriangleApp::initVulkan()
 	this->createVertexBuffer();
 	this->createIndexBuffer();
 	this->createUniformBuffer();
+	this->createDescriptorPool();
+	this->createDescriptorSet();
 	this->createCommandBuffers();
 	this->createSemaphores();
 }
@@ -883,8 +885,10 @@ void HelloTriangleApp::createGraphicsPipeline()
 	// want lines any thicker than 1.0f, you need to 
 	// enable the "wideLines" gpu feature
 
+	// Hey! from the future (when making descriptor sets)
+	// just a little tweak
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f;
@@ -970,10 +974,13 @@ void HelloTriangleApp::createGraphicsPipeline()
 	// uniform values need to be specified during pipeline
 	// creation. aw man
 
+	// Here from the future to specify the descriptor set
+	// layouts! dont forget this!
+	VkDescriptorSetLayout setLayouts[] = { this->descriptorSetLayout };
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // optional
-	pipelineLayoutInfo.pSetLayouts = nullptr; // optional
+	pipelineLayoutInfo.setLayoutCount = 1; // optional
+	pipelineLayoutInfo.pSetLayouts = setLayouts; // optional
 	pipelineLayoutInfo.pushConstantRangeCount = 0; //optional
 	pipelineLayoutInfo.pPushConstantRanges = 0; //optional
 
@@ -1320,6 +1327,80 @@ void HelloTriangleApp::createUniformBuffer()
 	// gonna be called in the main loop!
 }
 
+void HelloTriangleApp::createDescriptorPool()
+{
+	// This sets up the descriptors that'll be bound
+	// we're gonna make a descriptor set too (not here!)
+	// Descriptor sets cant be made directly, they have to
+	// be allocated from a pool (like command buffers!)
+
+	VkDescriptorPoolSize poolSize = {};
+	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSize.descriptorCount = 1;
+	
+	VkDescriptorPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = 1;
+	poolInfo.pPoolSizes = &poolSize;
+	poolInfo.maxSets = 1;
+	
+	if (vkCreateDescriptorPool(this->device, &poolInfo, nullptr, this->descriptorPool.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create descriptor pool!");
+	}
+}
+
+void HelloTriangleApp::createDescriptorSet()
+{
+	// You need to specify the pool to allocate from!
+
+	VkDescriptorSetLayout layouts[] = { this->descriptorSetLayout };
+	VkDescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = this->descriptorPool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = layouts;
+
+	if (vkAllocateDescriptorSets(this->device, &allocInfo, &this->descriptorSet) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create descriptor set!");
+	}
+
+	// Alright! so the descriptor set is allocated now!
+	// but the descriptors inside themselves still need to
+	// be configured!
+
+	VkDescriptorBufferInfo buffInfo = {};
+	buffInfo.buffer = this->uniformBuffer;
+	buffInfo.offset = 0;
+	buffInfo.range = sizeof(UniformBufferObject);
+	
+	// You update these descriptors using vkUpdateDescSets
+	// which takes an array of vkWriteDescSet as a param
+
+	VkWriteDescriptorSet descWrite = {};
+	descWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descWrite.dstSet = this->descriptorSet;
+	descWrite.dstBinding = 0;
+	descWrite.dstArrayElement = 0;
+	// first 2 params set it to our descSet, and set the
+	// binding to 0, cause our uniform buff binding's 0
+	// the array element is just the 1st item, which is 0
+
+	descWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descWrite.descriptorCount = 1;
+
+	descWrite.pBufferInfo = &buffInfo;
+	descWrite.pImageInfo = nullptr; // optional
+	descWrite.pTexelBufferView = nullptr; // optional
+	// you can refer it to image/buffer view descriptors
+
+	vkUpdateDescriptorSets(this->device, 1, &descWrite, 0, nullptr);
+
+	// Head over to this->createCommandBuffers() to add
+	// vkCmdBindDescriptorSets();
+}
+
 void HelloTriangleApp::createCommandBuffers()
 {
 	// Howdy fellow kids! I'm here from recreateSwapChain,
@@ -1428,6 +1509,24 @@ void HelloTriangleApp::createCommandBuffers()
 			// Hey! I'm from the future! here to bind the
 			// index buffer as well!
 			vkCmdBindIndexBuffer(this->commandBuffers[i], this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+			// Ey mang, I'm from this->createDescriptorSet
+			// to actually bind the desc. set to the 
+			// descriptors in the shader!
+			vkCmdBindDescriptorSets(this->commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipelineLayout, 0, 1, &this->descriptorSet, 0, nullptr);
+			// But! unlike shaders (vert, frag etc.),
+			// desc sets are not unique to the pipeline!
+			// so we need to specify if we want to bind
+			// the desc sets to the graphics or compute
+			// pipeline!
+			// the next param after that is the layout
+			// that the descs. are based on. the next
+			// three params specify the index of the first
+			// desc set, the number of sets to bind, and
+			// the array of sets to bind.
+			// PS: head over to createGraphicsPipeline
+			// to fix a little thing we did when we 
+			// flipped the clip-Y coords for MVP matrices
 
 			// the moment you've been waiting for,
 			// duh, duh luh duh duh duh, duh luh duh duh

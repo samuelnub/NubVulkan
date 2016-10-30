@@ -2,8 +2,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // our UBO location
+// ooh, if you want to specify the descriptor set index, do layout(set = 0...)
 // binding is like layout, but for attributes
-layout(binding = 0) uniform UniformBufferObject
+layout(set = 0, binding = 0) uniform UniformBufferObject
 {
 	mat4 model;
 	mat4 view;

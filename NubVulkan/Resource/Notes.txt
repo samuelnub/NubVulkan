@@ -194,3 +194,8 @@
 	happy birthday bob ross'o
 	finished up ubo buffer creation and memcpy'ing, but havent done descriptor
 	pools and sets yet
+
+30 Oct 2016:
+	woo! done with unform buffers, descriptor pools, sets and their layouts!
+	head over to this->createDescriptorPool, Set, createGraphicsPipeline
+	createCommandPool!

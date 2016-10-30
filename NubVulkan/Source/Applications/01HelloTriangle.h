@@ -14,6 +14,7 @@
 #include <set>
 #include <algorithm>
 #include <fstream>
+#include <chrono>
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
@@ -76,6 +77,8 @@ private:
 	void createVertexBuffer();
 	void createIndexBuffer();
 	void createUniformBuffer();
+	void createDescriptorPool();
+	void createDescriptorSet();
 	void createCommandBuffers();
 	void createSemaphores();
 	void updateUniformBuffer();
@@ -126,6 +129,10 @@ private:
 	VDeleter<VkBuffer> uniformBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> uniformBufferMemory{ device, vkFreeMemory };
 	
+	VDeleter<VkDescriptorPool> descriptorPool{ device, vkDestroyDescriptorPool };
+	// auto free'd when pool is gone
+	VkDescriptorSet descriptorSet;
+
 	// Each one holds record of our commands. Auto free'd when pool is gone
 	std::vector<VkCommandBuffer> commandBuffers;
 	
