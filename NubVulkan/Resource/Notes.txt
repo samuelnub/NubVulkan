@@ -199,3 +199,30 @@
 	woo! done with unform buffers, descriptor pools, sets and their layouts!
 	head over to this->createDescriptorPool, Set, createGraphicsPipeline
 	createCommandPool!
+
+31 Oct 2016:
+	boo!
+	images! texture mapping!
+	to get a texture to our geometry, we'll need to:
+	- Create an image object backed by our device memory
+	- Fill it with the pixels from the image file
+	- Create an image sampler
+	- Add a combined image sampler descriptor to sample colours from the tex
+	we're gonna use staging images and the final image (like buffers) to get
+	better performance. Images created by the swapchain are done for us, but
+	this time we'll do them manually as our own VkImage's
+	Take note: images can have different Layouts; as in layouts in memory,
+	because of how gpu's work, we cant just store it in a 2d physical array
+	of memory blocks if we want to do stuff like image manipulation, cause it
+	wouldn't be efficient, so we have to specify the memory layout type. we've
+	seen some of these layout types when doing the render pass:
+	VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIONAL, 
+	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIONAL,
+	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, and all that good stuff
+	one of the common ways to transition the layout of an img is to use a 
+	pipeline Barrier, which helps with the sync'ing process of operations, ie
+	making sure images are properly written to fully before reading from them
+	by the way, these pipeline barriers can also be used to shift/change
+	queue family ownership safely when you do VK_SHARING_MODE_EXCLUSIVE
+	we'll be using stb_image.h, all hail single header libraries!

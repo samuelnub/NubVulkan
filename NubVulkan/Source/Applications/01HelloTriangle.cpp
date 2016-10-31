@@ -41,6 +41,7 @@ void HelloTriangleApp::initVulkan()
 	this->createGraphicsPipeline();
 	this->createFrameBuffers();
 	this->createCommandPool();
+	this->createTextureImage();
 	this->createVertexBuffer();
 	this->createIndexBuffer();
 	this->createUniformBuffer();
@@ -1217,6 +1218,11 @@ void HelloTriangleApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevi
 
 	vkFreeCommandBuffers(this->device, this->commandPool, 1, &cmdBuff);
 	// dont forget to clean up after yourself!
+}
+
+void HelloTriangleApp::createTextureImage()
+{
+	// TODO
 }
 
 void HelloTriangleApp::createVertexBuffer()
