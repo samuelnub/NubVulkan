@@ -1220,9 +1220,108 @@ void HelloTriangleApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevi
 	// dont forget to clean up after yourself!
 }
 
-void HelloTriangleApp::createTextureImage()
+void HelloTriangleApp::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkImage>& image, VDeleter<VkDeviceMemory>& imageMemory)
 {
 	// TODO
+}
+
+void HelloTriangleApp::createTextureImage()
+{
+	int texWidth, texHeight, texChannels;
+	// TODO: magical strings!
+	stbi_uc *pixels = stbi_load("Textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	VkDeviceSize imageSize = texWidth * texHeight * 4;
+	// 4 bytes as its got the alpha component too!
+
+	if (!pixels)
+	{
+		throw std::exception("Couldn't load texture image file!");
+	}
+
+	// This is our staging image, so its just in this
+	// function scope
+	VDeleter<VkImage> stagingImage{ this->device, vkDestroyImage };
+	VDeleter<VkDeviceMemory> stagingImageMemory{ this->device, vkFreeMemory };
+
+	// Here's the params to create a VkImage:
+	VkImageCreateInfo imageInfo = {};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.extent.width = texWidth;
+	imageInfo.extent.height = texHeight;
+	imageInfo.extent.depth = 1; // its a 2d image, so just
+	// one "layer" of images
+
+	imageInfo.mipLevels = 1; // not used for now
+	imageInfo.arrayLayers = 1; // not used for now
+	imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+	// make sure it matches!
+	
+	imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+	// you could have _LINEAR or _OPTIMAL - impl. defined
+
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+	// you could have _UNDEFINED, or that.
+	// undefined means its not usable by the gpu lol and
+	// the first transition will discard these texels
+	// _PREINITIALIZED is also not used by the gpu, but
+	// the first transition won't get rid of the texels
+
+	imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	// staging, so it should be the source transfer part
+
+	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	// this image will only be used by one queue family
+	// if its exclusive. the family that supports
+	// transfer operations
+	// (yea, i need a family which supports trans 
+	// operations)
+
+	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageInfo.flags = 0; // optional
+	// samples aka multisampling. only relavent for
+	// attachment images.
+	// some optional flags include sparse images, and
+	// doing cool stuff like telling the gpu not to alloc
+	// useless memory for eg "air" texels in a 3d terrain
+
+	if (vkCreateImage(this->device, &imageInfo, nullptr, stagingImage.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create image!");
+	}
+
+	// okie, we've created an image object, so lets alloc
+	// the pixel data
+
+	VkMemoryRequirements memReqs;
+	vkGetImageMemoryRequirements(this->device, stagingImage, &memReqs);
+
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memReqs.size;
+	allocInfo.memoryTypeIndex = this->findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	// very similar to a regular buffer
+
+	if (vkAllocateMemory(this->device, &allocInfo, nullptr, stagingImageMemory.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't allocate image memory!");
+	}
+
+	// don't forget this!
+	vkBindImageMemory(this->device, stagingImage, stagingImageMemory, 0);
+
+
+	// let's copy the pixel data to the staging image!
+	void *data;
+	vkMapMemory(this->device, stagingImageMemory, 0, imageSize, 0, &data);
+	memcpy(data, pixels, (size_t)imageSize);
+	vkUnmapMemory(this->device, stagingImageMemory);
+
+	// free the image data!
+	stbi_image_free(pixels);
+
+	// Head on over to this->createImage! an abstraction
+	// like what we did for createBuffer
 }
 
 void HelloTriangleApp::createVertexBuffer()

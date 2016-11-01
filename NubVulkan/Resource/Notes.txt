@@ -226,3 +226,9 @@
 	by the way, these pipeline barriers can also be used to shift/change
 	queue family ownership safely when you do VK_SHARING_MODE_EXCLUSIVE
 	we'll be using stb_image.h, all hail single header libraries!
+
+1 Nov 2016:
+	darn, november already!
+	just finished up the createTextureImage func, allocs pixel data, but we're
+	gonna abstract the image (aka a glorified buffer) creation into another
+	func like how we did for createBuffer.
