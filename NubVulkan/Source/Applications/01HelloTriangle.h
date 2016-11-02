@@ -75,8 +75,11 @@ private:
 	void createGraphicsPipeline();
 	void createFrameBuffers();
 	void createCommandPool();
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer cmdBuff);
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkBuffer> &buff, VDeleter<VkDeviceMemory> &buffMemory);
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkImage> &image, VDeleter<VkDeviceMemory> &imageMemory);
 	void createTextureImage();
 	void createVertexBuffer();
@@ -121,6 +124,9 @@ private:
 
 	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
 	
+	VDeleter<VkImage> textureImage{ device, vkDestroyImage };
+	VDeleter<VkDeviceMemory> textureImageMemory{ device, vkFreeMemory };
+
 	// Needs to be in this order! memory will free once buff is destroyed
 	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };

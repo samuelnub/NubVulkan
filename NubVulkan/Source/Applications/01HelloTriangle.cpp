@@ -1075,6 +1075,41 @@ void HelloTriangleApp::createCommandPool()
 	}
 }
 
+VkCommandBuffer HelloTriangleApp::beginSingleTimeCommands()
+{
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = this->commandPool;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer cmdBuff;
+	vkAllocateCommandBuffers(this->device, &allocInfo, &cmdBuff);
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer(cmdBuff, &beginInfo);
+
+	return cmdBuff;
+}
+
+void HelloTriangleApp::endSingleTimeCommands(VkCommandBuffer cmdBuff)
+{
+	vkEndCommandBuffer(cmdBuff);
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuff;
+
+	vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(this->graphicsQueue);
+
+	vkFreeCommandBuffers(this->device, this->commandPool, 1, &cmdBuff);
+}
+
 void HelloTriangleApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkBuffer>& buff, VDeleter<VkDeviceMemory>& buffMemory)
 {
 	// Ey! abstracting buffer creation! Optimally though,
@@ -1158,6 +1193,10 @@ void HelloTriangleApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 
 void HelloTriangleApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
+	/* we've abstracted this to 
+	this->begin/endSingleTimeCommands, so this is just
+	for comment reference!
+
 	// remember - mem transfer ops are exec. in command
 	// buffers! just like drawing cmds. therefore we gotta
 	// first allocate a temporary command buff... oh man
@@ -1218,11 +1257,83 @@ void HelloTriangleApp::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevi
 
 	vkFreeCommandBuffers(this->device, this->commandPool, 1, &cmdBuff);
 	// dont forget to clean up after yourself!
+	*/
+
+	// the magic of abstraction: stuffing junk away
+
+	auto cmdBuff = this->beginSingleTimeCommands();
+
+	VkBufferCopy copyRegion = {};
+	copyRegion.size = size;
+
+	vkCmdCopyBuffer(cmdBuff, srcBuffer, dstBuffer, 1, &copyRegion);
+
+	this->endSingleTimeCommands(cmdBuff);
+}
+
+void HelloTriangleApp::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+{
+	// This guy handles layout transitions! in order to
+	// finish the job of making the images the correct
+	// format from our inferior input one. to a totally
+	// different one for gpu speeeeeeeeeeeeeeeeeeeeeeeeed
+
+	auto cmdBuff = this->beginSingleTimeCommands();
+
+	// a common way to perform a layout transition is to
+	// use an Image Memory Barrier. pipeline barriers like
+	// these are generally used to safely sync access to
+	// shared resources, ie making sure a write command
+	// is done before reading from it. but it can also be
+	// used for this - transitioning layouts
+	// (ps: theres a similar Buffer Memory Barrier too)
+	
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	// TODO
+
+	this->endSingleTimeCommands(cmdBuff);
 }
 
 void HelloTriangleApp::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkImage>& image, VDeleter<VkDeviceMemory>& imageMemory)
 {
-	// TODO
+	VkImageCreateInfo imageInfo = {};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.extent.width = width;
+	imageInfo.extent.height = height;
+	imageInfo.extent.depth = 1; // we'll just assume so
+	imageInfo.mipLevels = 1; // yea, assume too
+	imageInfo.arrayLayers = 1; // yea lol
+	imageInfo.format = format;
+	imageInfo.tiling = tiling;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+	imageInfo.usage = usage;
+	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT; // assume
+	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	// we're making lots of assumptions as we just need
+	// to get a textured piece of geometry lol
+
+	if (vkCreateImage(this->device, &imageInfo, nullptr, image.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create image!");
+	}
+
+	VkMemoryRequirements memReqs;
+	vkGetImageMemoryRequirements(this->device, image, &memReqs);
+
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memReqs.size;
+	allocInfo.memoryTypeIndex = this->findMemoryType(memReqs.memoryTypeBits, properties);
+
+	if (vkAllocateMemory(this->device, &allocInfo, nullptr, imageMemory.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't allocate image memory!");
+	}
+
+	// dont forget this!
+	vkBindImageMemory(this->device, image, imageMemory, 0);
 }
 
 void HelloTriangleApp::createTextureImage()
@@ -1242,6 +1353,9 @@ void HelloTriangleApp::createTextureImage()
 	// function scope
 	VDeleter<VkImage> stagingImage{ this->device, vkDestroyImage };
 	VDeleter<VkDeviceMemory> stagingImageMemory{ this->device, vkFreeMemory };
+
+	/* Since we abstracted this to this->createImage(),
+	we don't really need this here! just for reference
 
 	// Here's the params to create a VkImage:
 	VkImageCreateInfo imageInfo = {};
@@ -1309,7 +1423,20 @@ void HelloTriangleApp::createTextureImage()
 
 	// don't forget this!
 	vkBindImageMemory(this->device, stagingImage, stagingImageMemory, 0);
+	*/
+	
+	// poof! abstraction
 
+	this->createImage(
+		texWidth, 
+		texHeight, 
+		VK_FORMAT_R8G8B8A8_UNORM, 
+		VK_IMAGE_TILING_LINEAR, 
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+		stagingImage, 
+		stagingImageMemory);
 
 	// let's copy the pixel data to the staging image!
 	void *data;
@@ -1320,8 +1447,24 @@ void HelloTriangleApp::createTextureImage()
 	// free the image data!
 	stbi_image_free(pixels);
 
-	// Head on over to this->createImage! an abstraction
-	// like what we did for createBuffer
+	// alright, that was the staging image, now onto the
+	// real mothercucker!
+
+	this->createImage(
+		texWidth,
+		texHeight,
+		VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | 
+		VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		this->textureImage,
+		this->textureImageMemory);
+	// ooh! the USAGE_SAMPLED_BIT lets us sample the texel
+	// data from the gpu shader-side!
+
+
+
 }
 
 void HelloTriangleApp::createVertexBuffer()
@@ -1336,7 +1479,13 @@ void HelloTriangleApp::createVertexBuffer()
 
 	// just using the staging buffer first!
 
-	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuff, stagingBuffMemory);
+	this->createBuffer(
+		buffSize, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+		stagingBuff, 
+		stagingBuffMemory);
 
 	void *data;
 	vkMapMemory(this->device, stagingBuffMemory, 0, buffSize, 0, &data);
@@ -1371,7 +1520,13 @@ void HelloTriangleApp::createVertexBuffer()
 
 	// ... after the staging buffer, here's the actual one
 
-	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->vertexBuffer, this->vertexBufferMemory);
+	this->createBuffer(
+		buffSize, 
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		this->vertexBuffer, 
+		this->vertexBufferMemory);
 	// we're now using a new staging buffer with staging
 	// buffer memory for mapping & copying the vert data.
 	// _TRANSFER_SRC_BIT - the buff can be used as source
@@ -1400,7 +1555,13 @@ void HelloTriangleApp::createIndexBuffer()
 
 	VDeleter<VkBuffer> stagingBuff{ this->device, vkDestroyBuffer };
 	VDeleter<VkDeviceMemory> stagingBuffMem{ this->device, vkFreeMemory };
-	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuff, stagingBuffMem);
+	this->createBuffer(
+		buffSize, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+		stagingBuff, 
+		stagingBuffMem);
 
 	void *data;
 	vkMapMemory(this->device, stagingBuffMem, 0, buffSize, 0, &data);
@@ -1408,7 +1569,13 @@ void HelloTriangleApp::createIndexBuffer()
 	vkUnmapMemory(this->device, stagingBuffMem);
 
 	// just like the vert buffer this is the real gpu buff
-	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->indexBuffer, this->indexBufferMemory);
+	this->createBuffer(
+		buffSize, 
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
+		VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		this->indexBuffer, 
+		this->indexBufferMemory);
 	// note: look at the INDEX_BUFFER_BIT property
 	// instead of vert! coolio
 
@@ -1423,9 +1590,21 @@ void HelloTriangleApp::createUniformBuffer()
 {
 	VkDeviceSize buffSize = sizeof(UniformBufferObject);
 
-	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, this->uniformStagingBuffer, this->uniformStagingBufferMemory);
+	this->createBuffer(
+		buffSize, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+		this->uniformStagingBuffer, 
+		this->uniformStagingBufferMemory);
 
-	this->createBuffer(buffSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->uniformBuffer, this->uniformBufferMemory);
+	this->createBuffer(
+		buffSize, 
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		this->uniformBuffer, 
+		this->uniformBufferMemory);
 	//Standard stuff!
 
 	// Head off to this->updateUniformBuffer() which is

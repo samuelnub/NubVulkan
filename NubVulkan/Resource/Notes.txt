@@ -232,3 +232,9 @@
 	just finished up the createTextureImage func, allocs pixel data, but we're
 	gonna abstract the image (aka a glorified buffer) creation into another
 	func like how we did for createBuffer.
+
+2 Nov 2016:
+	finished up the reusable createImage(), gonna work on Layout Transition
+	functions, aka our new begin and endSimgleTimeCommands() helper funcs to
+	simplify the createBuffer() func
+	layout transitions! wip today
