@@ -1290,7 +1290,83 @@ void HelloTriangleApp::transitionImageLayout(VkImage image, VkFormat format, VkI
 	
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	// TODO
+	barrier.oldLayout = oldLayout;
+	barrier.newLayout = newLayout;
+
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	// you gotta set this to ignored if you want to
+	// explciitly say you're not going to transfer queue
+	// family ownership in this process. leaving this
+	// to its constructor-given-value isn't this!
+
+	barrier.image = image;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+	// so that sub struct specifies the details of the img
+	// that's attached. nothing special, just magic nums
+
+	if (oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) 
+	{
+		barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) 
+	{
+		barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) 
+	{
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	}
+	else 
+	{
+		throw std::invalid_argument("Unsupported layout transition!");
+	}
+	// barriers are usually used for sync'ing purposes, so
+	// you gotta specify which types of operations that
+	// involve the must happen before the barrier, and
+	// operations that involve the resource must wait on
+	// the barrier. we gotta do this even though
+	// vkQueueWaitIdle already manually sync's for us.
+	// the right values depend on the old and new layout
+	// let's come back here once we've sorted out what
+	// transitions we're gonna use.
+	// so uh, here's what the conditionals are doing:
+	// Preinitialized -> Transfer src, trans reads should
+	// wait on host writes
+	// Preinitialized -> Transfer dst, trans writes should
+	// wait on host writes
+	// Transfer Destination -> Shader reading, shader read
+	// should wait on transfer writes
+	// if we need more options in the future, we could
+	// expand these
+
+	vkCmdPipelineBarrier(
+		cmdBuff,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier);
+	// first 2 params specify the pipeline stage where
+	// the operations will happen that should happen
+	// before/after the barrier.
+	// next one can either be 0 or VK_DEP_BY_REGION_BIT,
+	// which turns the barrier into a per-region
+	// condition, which you can use to implement something
+	// to read from certain parts of the resource that's
+	// written already, for example.
+	// the last 3 pairs of parameters reference arrays of
+	// pipeline barriers of the 3 avaiable types:
+	// - Memory barriers, - Buffer memory barriers, 
+	// - Image memory barriers <- our needs!
 
 	this->endSingleTimeCommands(cmdBuff);
 }
@@ -1334,6 +1410,40 @@ void HelloTriangleApp::createImage(uint32_t width, uint32_t height, VkFormat for
 
 	// dont forget this!
 	vkBindImageMemory(this->device, image, imageMemory, 0);
+}
+
+void HelloTriangleApp::copyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height)
+{
+	auto cmdBuff = this->beginSingleTimeCommands();
+	
+	VkImageSubresourceLayers subResource = {};
+	subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	subResource.baseArrayLayer = 0;
+	subResource.mipLevel = 0;
+	subResource.layerCount = 1;
+
+	// Just like with buffers, we gotta specify which part
+	// of the image needs to be copied over.
+
+	VkImageCopy region = {};
+	region.srcSubresource = subResource;
+	region.dstSubresource = subResource;
+	region.srcOffset = { 0,0,0 }; // AGH! the 3 eye'd bug!
+	region.dstOffset = { 0,0,0 }; // THERES TWO??!! NOOOO
+	region.extent.width = width;
+	region.extent.height = height;
+	region.extent.depth = 1;
+
+	vkCmdCopyImage(
+		cmdBuff,
+		srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1, &region);
+	// first 2 pairs of params specify the src/dst
+	// image & layout. this assumes that they've been
+	// transferred to their optimal layout by now
+
+	this->endSingleTimeCommands(cmdBuff);
 }
 
 void HelloTriangleApp::createTextureImage()
@@ -1463,8 +1573,31 @@ void HelloTriangleApp::createTextureImage()
 	// ooh! the USAGE_SAMPLED_BIT lets us sample the texel
 	// data from the gpu shader-side!
 
+	// Hey! I'm here from the future! we're now done with
+	// the following helper functions to do the layout
+	// transitioning and image copying!
 
+	this->transitionImageLayout(
+		stagingImage,
+		VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_LAYOUT_PREINITIALIZED,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
+	this->transitionImageLayout(
+		this->textureImage,
+		VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_LAYOUT_PREINITIALIZED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+	this->copyImage(stagingImage, this->textureImage, texWidth, texHeight);
+
+	// remember this! make it _SHADER_READ_ONLY_OPTIMAL
+	// to allow our shader to sample it!
+	this->transitionImageLayout(
+		this->textureImage,
+		VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void HelloTriangleApp::createVertexBuffer()

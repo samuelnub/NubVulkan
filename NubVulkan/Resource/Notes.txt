@@ -238,3 +238,24 @@
 	functions, aka our new begin and endSimgleTimeCommands() helper funcs to
 	simplify the createBuffer() func
 	layout transitions! wip today
+
+3 Nov 2016:
+	continuing on layout transitions! transitionImageLayout(...)
+	done! we now have an image with pixel data loaded in by stb, then we fill
+	our staging image with the data, then safely transition our layout types
+	to be optimal for us, and then we copy the staging image over to our real
+	class member texture image, then we transition it further to allow shaders
+	to sample from it
+	All of these helper funcs which use little temporary command buffers have
+	been set up to execute Synchronously by waiting for the queue to be idle!
+	for real applications, it's recommended to combine these operations in a
+	single cmd buffer and execute them Asynchronously for better throughput,
+	esp. the transitioning and copying. (if you're not too lazy, you can make
+	a setupCommandBuffer func to record cmds, and a flushSetupCommands to 
+	execute them, but heck, you'd better do this once we've actually seen our
+	texture mapping work!)
+	In this series, we also used a staging image to squeeze some better perf,
+	but acutally using a buffer and copying pixels using 
+	vkCmdCopyBufferToImage also works! that actually yields better results lol
+	So, now our image contains our texture data, so now we need to access this
+	from the graphics pipeline. onward!
