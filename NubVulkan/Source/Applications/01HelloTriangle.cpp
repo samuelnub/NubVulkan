@@ -1,5 +1,10 @@
 #include <Applications/01HelloTriangle.h>
 
+// Throws errors like crazy if we have this define symbol
+// in the header
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 void HelloTriangleApp::run()
 {
 	this->initWindow();
@@ -42,6 +47,8 @@ void HelloTriangleApp::initVulkan()
 	this->createFrameBuffers();
 	this->createCommandPool();
 	this->createTextureImage();
+	this->createTextureImageView();
+	this->createTextureSampler();
 	this->createVertexBuffer();
 	this->createIndexBuffer();
 	this->createUniformBuffer();
@@ -601,31 +608,9 @@ void HelloTriangleApp::createImageViews()
 
 	for (uint32_t i = 0; i < this->swapChainImages.size(); i++)
 	{
-		VkImageViewCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		createInfo.image = this->swapChainImages[i];
-		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		createInfo.format = swapChainImageFormat;
-		// ooh, lets you map the colour channels to other
-		// colours, eg red outputs will be mapped to
-		// grayscale, etc., but we're sticking to the def.
-		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-		// subresourcerange specifies what this image's
-		// purpose will be
-		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		createInfo.subresourceRange.baseMipLevel = 0;
-		createInfo.subresourceRange.levelCount = 1;
-		createInfo.subresourceRange.baseArrayLayer = 0;
-		createInfo.subresourceRange.layerCount = 1;
-		
-		if (vkCreateImageView(this->device, &createInfo, nullptr, this->swapChainImageViews[i].replace()) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Couldn't create image view!");
-		}
+		// I'm here from the future! the fifth of november
+		// to be exact. just removing redundancy. 
+		this->createImageView(this->swapChainImages[i], this->swapChainImageFormat, this->swapChainImageViews[i]);
 	}
 }
 
@@ -1598,6 +1583,92 @@ void HelloTriangleApp::createTextureImage()
 		VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+
+void HelloTriangleApp::createTextureImageView()
+{
+	this->createImageView(this->textureImage, VK_FORMAT_R8G8B8A8_UNORM, this->createTextureImageView);
+
+
+
+	// Let's head over to our abstracted createImageView
+	// func. stay DRY, pupper
+
+}
+
+void HelloTriangleApp::createImageView(VkImage image, VkFormat format, VDeleter<VkImageView>& imageView)
+{
+	// This is pretty similar to createImageViews for our
+	// swapchain actually! just a few minor differences
+	// with the format and image
+
+	VkImageViewCreateInfo viewInfo = {};
+	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image = image;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format = format;
+	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+	// we've omitted our explicit viewInfo.components part
+	// cause VK_COMPONENT_SWIZZLE_IDENTITY is defined as
+	// 0 anyway.
+
+	if (vkCreateImageView(this->device, &viewInfo, nullptr, this->textureImageView.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create texture image view!");
+	}
+
+	// Head over to this->createImageViews (yes, the one
+	// we did several weeks ago for the swapchain!) to see
+	// this used in action too
+}
+
+void HelloTriangleApp::createTextureSampler()
+{
+	VkSamplerCreateInfo samplerInfo = {};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+	// mag and min filter specify how to interpolate
+	// texels that are magnified or minified. mag is over-
+	// sampling and min is undersampling.
+
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	// can be Mirrored, Repeat, Mirrored repeat, Clamp to
+	// edge, Mirror clamp to edge, Clamp to border.
+	// U,V,W instead of X,Y,Z!
+
+	samplerInfo.anisotropyEnable = VK_TRUE;
+	samplerInfo.maxAnisotropy = 16;
+
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	// if we've got a border, what should the border be?
+	// sadly, no abritrary colour of your choice :(
+
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	// ok, so this field specifies which coord system you
+	// want to use to address texels in an image. if it's
+	// true, you can use coords within [0,texWidth) and
+	// [0,texHeight) range. if its false, then texels are
+	// addressed using the [0,1) range on all axes (float)
+	// usually always normalized to 0-1, as you see with
+	// UV mapping!
+
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = 0.0f;
+	// they're all mipmap related (discussed next time!)
+
+	if (vkCreateSampler(this->device, &samplerInfo, nullptr, this->textureSampler.replace()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Couldn't create texture sampler!");
+	}
 }
 
 void HelloTriangleApp::createVertexBuffer()

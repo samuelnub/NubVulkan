@@ -259,3 +259,30 @@
 	vkCmdCopyBufferToImage also works! that actually yields better results lol
 	So, now our image contains our texture data, so now we need to access this
 	from the graphics pipeline. onward!
+
+5 Nov 2016:
+	sorry for abandonin' ya, went to finish off that stupid chrome extension
+	javascript is a real sin against this world
+	image view and sampler!
+	we're gonna make 2 more resources in order to let the graphics pipeline
+	sample an (our) image. the first is one that we've used when fiddling with
+	swapchain images - Image Views, and also a new jiggymadoobop - the Sampler
+	go to createTextureImageView()!
+	abstracted; helper func called createImageView (singular!), used in our
+	createImageViews for swapchain creation too. 
+	Samplers:
+	It's possible for the shaders to directly read from the texel data of 
+	images, but that's not very ethical and isnt very common when they're used
+	as textures. textures are usually accessed through samplers, which will
+	apply filtering and transformations to compute/return the final colour
+	These filters are good for problems ie Oversampling. imagine a texture
+	that's mapped to geometry with more fragments than texels (which is quite
+	common if you think bout it), if you simply took the closest texel for
+	the given texture coordinate in each and every fragment, you'd have a 
+	minecraft-style non-filtered image. If you combined the nearest 4, you
+	get bilinear filtering! Undersampling is another problem, in the event
+	that you've got more texels than fragments (think far-off terrain). you'd
+	need anistropic filtering. You can also take care of transformations with
+	samplers, like specifying if you want repeat, clamped, bordered sampling
+	if the sampler were to read beyond the image.
+	head over to createTextureSampler() to see this set up!

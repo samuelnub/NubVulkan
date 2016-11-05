@@ -20,9 +20,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
-
 struct QueueFamilyIndices
 {
 	int graphicsFamily = -1;
@@ -83,6 +80,9 @@ private:
 	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkImage> &image, VDeleter<VkDeviceMemory> &imageMemory);
 	void copyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
 	void createTextureImage();
+	void createTextureImageView();
+	void createImageView(VkImage image, VkFormat format, VDeleter<VkImageView> &imageView);
+	void createTextureSampler();
 	void createVertexBuffer();
 	void createIndexBuffer();
 	void createUniformBuffer();
@@ -127,6 +127,8 @@ private:
 	
 	VDeleter<VkImage> textureImage{ device, vkDestroyImage };
 	VDeleter<VkDeviceMemory> textureImageMemory{ device, vkFreeMemory };
+	VDeleter<VkImageView> textureImageView{ device, vkDestroyImageView };
+	VDeleter<VkSampler> textureSampler{ device, vkDestroySampler };
 
 	// Needs to be in this order! memory will free once buff is destroyed
 	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
