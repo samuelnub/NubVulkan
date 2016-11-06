@@ -750,10 +750,31 @@ void HelloTriangleApp::createDescriptorSetLayout()
 	uboLayoutBinding.pImmutableSamplers = nullptr; // optional
 	// Only used for image sampling related descriptors.
 
+	// Hey! here from the future! I'm here to add the
+	// combined image sampler descriptor to this set
+	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
+	samplerLayoutBinding.binding = 1;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	// the stageFlags lets vulkan know that we intend to
+	// use our combined img sampler desc. inside the frag
+	// shader. That's where the ultimate colour of the
+	// frag will be determined
+	// Oooh, if you wanted to implement something like a 
+	// heightmap, you could put the vertex shader as being
+	// one of the shaders to also sample from images
+	// Head over to this->createDescriptorPool and change
+	// the descriptor pool size to accomodate this new
+	// comb. img. sampler descriptor!
+
+	// Future me still here! remember to do this too!
+	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 1;
-	layoutInfo.pBindings = &uboLayoutBinding;
+	layoutInfo.bindingCount = bindings.size();
+	layoutInfo.pBindings = bindings.data();
 
 	if (vkCreateDescriptorSetLayout(this->device, &layoutInfo, nullptr, this->descriptorSetLayout.replace()) != VK_SUCCESS)
 	{
@@ -1441,7 +1462,7 @@ void HelloTriangleApp::createTextureImage()
 
 	if (!pixels)
 	{
-		throw std::exception("Couldn't load texture image file!");
+		throw std::runtime_error("Couldn't load texture image file!");
 	}
 
 	// This is our staging image, so its just in this
@@ -1587,9 +1608,7 @@ void HelloTriangleApp::createTextureImage()
 
 void HelloTriangleApp::createTextureImageView()
 {
-	this->createImageView(this->textureImage, VK_FORMAT_R8G8B8A8_UNORM, this->createTextureImageView);
-
-
+	this->createImageView(this->textureImage, VK_FORMAT_R8G8B8A8_UNORM, this->textureImageView);
 
 	// Let's head over to our abstracted createImageView
 	// func. stay DRY, pupper
@@ -1616,7 +1635,10 @@ void HelloTriangleApp::createImageView(VkImage image, VkFormat format, VDeleter<
 	// cause VK_COMPONENT_SWIZZLE_IDENTITY is defined as
 	// 0 anyway.
 
-	if (vkCreateImageView(this->device, &viewInfo, nullptr, this->textureImageView.replace()) != VK_SUCCESS)
+	// note to self: debugging is a fun and rewarding
+	// process. gave it this->textureImageView instead
+	// lol.
+	if (vkCreateImageView(this->device, &viewInfo, nullptr, imageView.replace()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Couldn't create texture image view!");
 	}
@@ -1822,14 +1844,21 @@ void HelloTriangleApp::createDescriptorPool()
 	// Descriptor sets cant be made directly, they have to
 	// be allocated from a pool (like command buffers!)
 
-	VkDescriptorPoolSize poolSize = {};
-	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSize.descriptorCount = 1;
+	// Hey! here from the future from the creation of our
+	// combined image sampler descriptor!
+
+	std::array<VkDescriptorPoolSize, 2> poolSizes = {};
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[0].descriptorCount = 1;
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[1].descriptorCount = 1;
+	// PS: when you're done looking at this, head over to
+	// our also-modified createDescriptorSet func!
 	
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = 1;
-	poolInfo.pPoolSizes = &poolSize;
+	poolInfo.poolSizeCount = poolSizes.size();
+	poolInfo.pPoolSizes = poolSizes.data();
 	poolInfo.maxSets = 1;
 	
 	if (vkCreateDescriptorPool(this->device, &poolInfo, nullptr, this->descriptorPool.replace()) != VK_SUCCESS)
@@ -1866,24 +1895,38 @@ void HelloTriangleApp::createDescriptorSet()
 	// You update these descriptors using vkUpdateDescSets
 	// which takes an array of vkWriteDescSet as a param
 
-	VkWriteDescriptorSet descWrite = {};
-	descWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descWrite.dstSet = this->descriptorSet;
-	descWrite.dstBinding = 0;
-	descWrite.dstArrayElement = 0;
+	// Hey! here from the future with combined image
+	// sampler descriptor creation!
+	VkDescriptorImageInfo imageInfo = {};
+	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	imageInfo.imageView = this->textureImageView;
+	imageInfo.sampler = this->textureSampler;
+
+	
+	// Future me is also editing this to hold an array
+	std::array<VkWriteDescriptorSet, 2> descWrites = {};
+
+	// Doing the one regarding the uniform buff first
+	descWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descWrites[0].dstSet = this->descriptorSet;
+	descWrites[0].dstBinding = 0;
+	descWrites[0].dstArrayElement = 0;
+	descWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descWrites[0].descriptorCount = 1;
+	descWrites[0].pBufferInfo = &buffInfo;
 	// first 2 params set it to our descSet, and set the
 	// binding to 0, cause our uniform buff binding's 0
 	// the array element is just the 1st item, which is 0
 
-	descWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descWrite.descriptorCount = 1;
+	descWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descWrites[1].dstSet = this->descriptorSet;
+	descWrites[1].dstBinding = 1;
+	descWrites[1].dstArrayElement = 0;
+	descWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descWrites[1].descriptorCount = 1;
+	descWrites[1].pImageInfo = &imageInfo;
 
-	descWrite.pBufferInfo = &buffInfo;
-	descWrite.pImageInfo = nullptr; // optional
-	descWrite.pTexelBufferView = nullptr; // optional
-	// you can refer it to image/buffer view descriptors
-
-	vkUpdateDescriptorSets(this->device, 1, &descWrite, 0, nullptr);
+	vkUpdateDescriptorSets(this->device, descWrites.size(), descWrites.data(), 0, nullptr);
 
 	// Head over to this->createCommandBuffers() to add
 	// vkCmdBindDescriptorSets();
@@ -2078,7 +2121,7 @@ void HelloTriangleApp::updateUniformBuffer()
 	// This is where we define our MVP matrices!
 	UniformBufferObject ubo = {};
 	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.proj = glm::perspective(glm::radians(45.0f), this->swapChainExtent.width / (float)this->swapChainExtent.height, 0.1f, 1000.0f);
 
 	// right then. GLM was designed for opengl, and VK has

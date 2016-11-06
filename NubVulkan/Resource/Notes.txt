@@ -286,3 +286,13 @@
 	samplers, like specifying if you want repeat, clamped, bordered sampling
 	if the sampler were to read beyond the image.
 	head over to createTextureSampler() to see this set up!
+
+6 Nov 2016:
+	we looked at Descriptors when doing the uniform buffer. this time, we're
+	gonna look at a new descriptor type - Combined Image Samplers. this
+	descriptor makes it possible for shaders to access an image via a sampler
+	object (like all the objects we've created previously!)
+	we're gonna update our createDescriptorSetLayout func to add this combined
+	shader image sampler descriptor! afterwards, we'll add tex coords to our
+	const Vertex data, and modify the frag shader to read colours from the tex
+	instead of just interpolating colour values

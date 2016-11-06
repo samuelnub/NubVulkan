@@ -9,7 +9,8 @@
 struct Vertex
 {
 	glm::vec3 pos;
-	glm::vec3 norm; // i swear its the colour data... for now
+	glm::vec3 norm;
+	glm::vec2 texCoord; // Hey! from the future! told you it's tex coords!
 
 	// Helper functions for this vertex class; oops, sorry, struct...
 
@@ -17,14 +18,14 @@ struct Vertex
 	static VkVertexInputBindingDescription getBindingDescription();
 
 	// Attribute descriptions - VAO's pretty much
-	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
+	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
 };
 
 const std::vector<Vertex> vertices = {
-	{ { -0.5f, -0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f } },
-	{ { 0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f } },
-	{ { 0.5f, 0.5f, 0.0f },{ 0.0f, 0.0f, 1.0f } },
-	{ { -0.5f, 0.5f, 0.0f },{ 1.0f, 1.0f, 1.0f } }
+	{ { -0.5f, -0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f } },
+	{ { 0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } },
+	{ { 0.5f, 0.5f, 0.0f },{ 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+	{ { -0.5f, 0.5f, 0.0f },{ 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } }
 };
 
 const std::vector<uint32_t> indices = {

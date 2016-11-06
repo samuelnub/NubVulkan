@@ -45,13 +45,13 @@ VkVertexInputBindingDescription Vertex::getBindingDescription()
 	return bindDesc;
 }
 
-std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescriptions()
+std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions()
 {
-	// the magic number for the array size of 2 is 'cause
-	// of the amount of attributes we have, which is just
-	// the pos and norm (shh, colour...)
+	// the magic number for the array size of 3 is 'cause
+	// of the amount of attributes we have, which is the
+	// pos, norm, and uv coords
 
-	std::array<VkVertexInputAttributeDescription, 2> attribDescs = {};
+	std::array<VkVertexInputAttributeDescription, 3> attribDescs = {};
 	
 	// this part should make sense
 	// heh, regarding the format, its a vector 3, aka 3
@@ -65,6 +65,11 @@ std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescription
 	attribDescs[1].location = 1;
 	attribDescs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 	attribDescs[1].offset = offsetof(Vertex, norm);
+
+	attribDescs[2].binding = 0;
+	attribDescs[2].location = 2;
+	attribDescs[2].format = VK_FORMAT_R32G32_SFLOAT;
+	attribDescs[2].offset = offsetof(Vertex, texCoord);
 
 	return attribDescs;
 }
