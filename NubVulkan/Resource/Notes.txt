@@ -296,3 +296,18 @@
 	shader image sampler descriptor! afterwards, we'll add tex coords to our
 	const Vertex data, and modify the frag shader to read colours from the tex
 	instead of just interpolating colour values
+
+7 Nov 2016:
+	depth buffering! let's work with the Z dimension properly! we've already
+	done like the first couple of bits in the tutorial where vec2's become
+	vec3's, yada yada ya
+	theres 2 ways to fix this depth issue:
+	- literally sort all your vertex orders from back-to-front every time
+	- use a flippin depth buffer.
+	well, the first one may seem stupid, but it's the only easy way to do
+	proper transparency (you could do OIT, weight-based transparency though!)
+	A Depth Buffer is an additional attachment that stores the depth for every
+	position; just like colour attachments for each colour in each position.
+	every time the rasterizer makes a new fragment, the depth test will check
+	the new frag is closer than the previous, if yes it overrites the last, if
+	not, then its discarded.

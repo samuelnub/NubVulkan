@@ -46,6 +46,7 @@ void HelloTriangleApp::initVulkan()
 	this->createGraphicsPipeline();
 	this->createFrameBuffers();
 	this->createCommandPool();
+	this->createDepthResources();
 	this->createTextureImage();
 	this->createTextureImageView();
 	this->createTextureSampler();
@@ -1450,6 +1451,22 @@ void HelloTriangleApp::copyImage(VkImage srcImage, VkImage dstImage, uint32_t wi
 	// transferred to their optimal layout by now
 
 	this->endSingleTimeCommands(cmdBuff);
+}
+
+void HelloTriangleApp::createDepthResources()
+{
+	// making a depth image is actually pretty straight-
+	// forward lol. keep same resolution as color attach.
+	// defined by the swapchain extent, an image usage
+	// that's appropriate for a depth attachment, optimal
+	// tiling and device local memory. hm, what's the
+	// format for a depth image tho? A: it's indicated by
+	// the _D??_ format (VK_FORMAT_D??_...)
+	// VK_FORMAT_D32_SFLOAT for 32 bit float depth
+	// VK_FORMAT_D32_SFLOAT_S8_UINT plus 8 bit stencil!
+	// VK_FORMAT_D32_UNORM_S8_UINT 24 bit float for depth
+	// and 8 bit for stencil
+
 }
 
 void HelloTriangleApp::createTextureImage()

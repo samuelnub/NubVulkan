@@ -17,6 +17,7 @@
 #include <chrono>
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE // 0.0 - 1.0 instead of GL's -1.0 - 0.0
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -79,6 +80,7 @@ private:
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkImage> &image, VDeleter<VkDeviceMemory> &imageMemory);
 	void copyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
+	void createDepthResources();
 	void createTextureImage();
 	void createTextureImageView();
 	void createImageView(VkImage image, VkFormat format, VDeleter<VkImageView> &imageView);
@@ -125,6 +127,10 @@ private:
 
 	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
 	
+	VDeleter<VkImage> depthImage{ device, vkDestroyImage };
+	VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
+	VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
+
 	VDeleter<VkImage> textureImage{ device, vkDestroyImage };
 	VDeleter<VkDeviceMemory> textureImageMemory{ device, vkFreeMemory };
 	VDeleter<VkImageView> textureImageView{ device, vkDestroyImageView };
