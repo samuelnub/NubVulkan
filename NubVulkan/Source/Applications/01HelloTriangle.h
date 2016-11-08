@@ -80,10 +80,13 @@ private:
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VDeleter<VkImage> &image, VDeleter<VkDeviceMemory> &imageMemory);
 	void copyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
+	VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+	VkFormat findDepthFormat();
+	bool hasStencilComponent(VkFormat format);
 	void createDepthResources();
 	void createTextureImage();
 	void createTextureImageView();
-	void createImageView(VkImage image, VkFormat format, VDeleter<VkImageView> &imageView);
+	void createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VDeleter<VkImageView> &imageView);
 	void createTextureSampler();
 	void createVertexBuffer();
 	void createIndexBuffer();

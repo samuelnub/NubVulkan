@@ -311,3 +311,23 @@
 	every time the rasterizer makes a new fragment, the depth test will check
 	the new frag is closer than the previous, if yes it overrites the last, if
 	not, then its discarded.
+
+8 Nov 2016:
+	Check out findSupportedFormat and findDepthFormat, and hasStencilComponent
+	for more info on these lil abstraction funcs!
+	a couple of funcs were also adapted to allow our own aspectMask for depth
+	to be specified (transitioning and imageview creation)
+	Editing the render pass too! (duh)
+	Editing createFramebuffers too! to specify the depth image view as a 
+	secondary attachment!
+	Also, we're moving createFrameBuffers in initVulkan to make sure that it
+	executes after we've created our depth resources
+	Because we've got multiple attachments with VK_ATTACHMENT_LOAD_OP_CLEAR,
+	we gotta specify multiple clear values too! go to createCommandBuffers &
+	there'll be an array of VkClearValue structs now
+	At this point, the depth attachment is ready to rumble, but depth testing
+	needs to be enabled first in the graphics pipeline! it's config'd via the
+	vkPipeLineDepthStencilStateCreateInfo struct. head over to 
+	createGraphicsPipeline (scroll down a bit, theres some stuff already!)
+	to handle window resizes now with our added depth image view, just modify
+	our recreateSwapChain func!
