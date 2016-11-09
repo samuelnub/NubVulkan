@@ -331,3 +331,7 @@
 	createGraphicsPipeline (scroll down a bit, theres some stuff already!)
 	to handle window resizes now with our added depth image view, just modify
 	our recreateSwapChain func!
+
+9 Nov 2016:
+	lol rest in peace america
+	still cant get depth testing to work :(
