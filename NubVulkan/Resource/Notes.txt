@@ -335,3 +335,8 @@
 9 Nov 2016:
 	lol rest in peace america
 	still cant get depth testing to work :(
+
+10 Nov 2016:
+	happy birthday fallout 4!
+	depth buffering works, had to switch minDepth and maxDepth in the
+	createGraphicsPipeline function. wow

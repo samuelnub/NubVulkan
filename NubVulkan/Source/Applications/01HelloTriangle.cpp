@@ -670,7 +670,7 @@ void HelloTriangleApp::createRenderPass()
 	depthAtt.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAtt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	depthAtt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAtt.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depthAtt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthAtt.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	// format should be same as our depth image (should!)
 	// we dont really need storing depth data ATM, so
@@ -723,7 +723,7 @@ void HelloTriangleApp::createRenderPass()
 	// cycles in the dependency graph
 
 	dep.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-	dep.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	dep.srcAccessMask = 0;
 	// these params specify the ops to wait on and the
 	// stages in which these ops occur. we need to wait
 	// for the swap chain to finish reading from the image
@@ -875,8 +875,10 @@ void HelloTriangleApp::createGraphicsPipeline()
 	viewport.y = 0.0f;
 	viewport.width = (float)this->swapChainExtent.width;
 	viewport.height = (float)this->swapChainExtent.height;
-	viewport.minDepth = 1.0f;
-	viewport.maxDepth = 0.0f;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+	// haha oh my god, depth buffering didnt work because
+	// these two little shits were switched around
 	// Depth range for the framebuffer, 0 to 1.0 is normal
 
 	// What region of pixels will be stored
@@ -1390,15 +1392,14 @@ void HelloTriangleApp::transitionImageLayout(VkImage image, VkFormat format, VkI
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 	}
-	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) 
 	{
-		// Hey! from the future too, with depth stuff!
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 	}
 	else 
 	{
-		throw std::invalid_argument("Unsupported layout transition!");
+		throw std::invalid_argument("Couldn't get supported layout transition!");
 	}
 	// barriers are usually used for sync'ing purposes, so
 	// you gotta specify which types of operations that
@@ -1550,7 +1551,8 @@ VkFormat HelloTriangleApp::findDepthFormat()
 	return this->findSupportedFormat(
 	{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
 		VK_IMAGE_TILING_OPTIMAL,
-		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+		);
 }
 
 bool HelloTriangleApp::hasStencilComponent(VkFormat format)
