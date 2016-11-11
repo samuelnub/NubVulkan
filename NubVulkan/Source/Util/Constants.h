@@ -21,6 +21,7 @@ struct Vertex
 	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
 };
 
+// Only for testing at this point! not really needed
 const std::vector<Vertex> vertices = {
 	{ { -0.5f, -0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f },{ 0.0f, 0.0f } },
 	{ { 0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f },{ 1.0f, 0.0f } },
@@ -33,6 +34,7 @@ const std::vector<Vertex> vertices = {
 	{ { -0.5f, 0.5f, -0.5f },{ 1.0f, 1.0f, 1.0f },{ 0.0f, 1.0f } }
 };
 
+// Also not really needed now!
 const std::vector<uint32_t> indices = {
 	0, 1, 2, 2, 3, 0,
 	4, 5, 6, 6, 7, 4
@@ -47,6 +49,9 @@ struct UniformBufferObject
 
 const int WIDTH = 1280;
 const int HEIGHT = 720;
+
+const std::string MODEL_PATH = "Models/chalet.obj";
+const std::string TEXTURE_PATH = "Textures/chalet.jpg";
 
 const std::vector<const char *> validationLayers = {
 	"VK_LAYER_LUNARG_standard_validation"

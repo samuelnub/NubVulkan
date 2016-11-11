@@ -340,3 +340,7 @@
 	happy birthday fallout 4!
 	depth buffering works, had to switch minDepth and maxDepth in the
 	createGraphicsPipeline function. wow
+
+11 Nov 2016:
+	model loading, with tinyobjloader
+	loadModel func!

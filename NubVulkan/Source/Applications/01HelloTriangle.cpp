@@ -5,6 +5,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 void HelloTriangleApp::run()
 {
 	this->initWindow();
@@ -1612,7 +1615,7 @@ void HelloTriangleApp::createTextureImage()
 {
 	int texWidth, texHeight, texChannels;
 	// TODO: magical strings!
-	stbi_uc *pixels = stbi_load("Textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	stbi_uc *pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 	// 4 bytes as its got the alpha component too!
 
@@ -1847,6 +1850,31 @@ void HelloTriangleApp::createTextureSampler()
 	{
 		throw std::runtime_error("Couldn't create texture sampler!");
 	}
+}
+
+void HelloTriangleApp::loadModel()
+{
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string err;
+	// as you know, and .obj file has pos, norm, uv's and
+	// faces. faces consist of an arbitrary amount of 
+	// verts, where each vert refers to a pos/norm/uv by
+	// its index. reuse, reduce, recycle!
+	// the attrib_t type contains all of the vectors of 
+	// this data (go peek its definition, just pure 
+	// vectors lol)
+	// our shape vector will just hold all the individual
+	// "object" shapes with face info and the pos/norm/uv
+	// it uses.
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str())) 
+	{
+		throw std::runtime_error(err);
+	}
+	
+	// TODO
 }
 
 void HelloTriangleApp::createVertexBuffer()
