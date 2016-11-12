@@ -53,6 +53,7 @@ void HelloTriangleApp::initVulkan()
 	this->createTextureImage();
 	this->createTextureImageView();
 	this->createTextureSampler();
+	this->loadModel();
 	this->createVertexBuffer();
 	this->createIndexBuffer();
 	this->createUniformBuffer();
@@ -1185,7 +1186,7 @@ void HelloTriangleApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 	// you can also specify others, refer to the vulkan
 	// registries and search up for the
 	// "VkBufferUsageFlagBits" enum
-
+	
 	buffInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	// similar to the images in the swapchain, buffers can
 	// also be owned by a specific queue family, or be
@@ -1869,12 +1870,49 @@ void HelloTriangleApp::loadModel()
 	// "object" shapes with face info and the pos/norm/uv
 	// it uses.
 
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str())) 
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str()))
 	{
 		throw std::runtime_error(err);
 	}
-	
-	// TODO
+
+	// Let's now combine all of these faces into a single
+	// model, let's concatenate all the shapes
+
+	std::unordered_map<Vertex, int> uniqueVerts;
+
+	for (const auto &shape : shapes)
+	{
+		for (const auto &index : shape.mesh.indices)
+		{
+			Vertex vertex = {};
+			
+			vertex.pos = {
+				attrib.vertices[3 * index.vertex_index + 0],
+				attrib.vertices[3 * index.vertex_index + 1],
+				attrib.vertices[3 * index.vertex_index + 2]
+			};
+			// sadly, tinyobjloader's attrib.vertices 
+			// array is in floats, so it isnt a glm::vec3,
+			// which results in us having to multiply the
+			// index by 3. likewise for the tex coords
+			// below
+
+			vertex.texCoord = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+			};
+
+			vertex.norm = { 1.0f, 1.0f, 1.0f };
+			// placeholder for now lol
+
+			if (uniqueVerts.count(vertex) == 0)
+			{
+				uniqueVerts[vertex] = this->vertices.size();
+				this->vertices.push_back(vertex);
+			}
+			this->indices.push_back(uniqueVerts[vertex]);
+		}
+	}
 }
 
 void HelloTriangleApp::createVertexBuffer()
@@ -2312,9 +2350,9 @@ void HelloTriangleApp::updateUniformBuffer()
 
 	// This is where we define our MVP matrices!
 	UniformBufferObject ubo = {};
-	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), this->swapChainExtent.width / (float)this->swapChainExtent.height, 0.1f, 1000.0f);
+	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(1.0f, 4.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.25f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = glm::perspective(glm::radians(25.0f), this->swapChainExtent.width / (float)this->swapChainExtent.height, 0.1f, 1000.0f);
 
 	// right then. GLM was designed for opengl, and VK has
 	// inverted Y clip coords

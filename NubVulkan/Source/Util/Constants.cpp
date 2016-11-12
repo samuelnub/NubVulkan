@@ -73,3 +73,8 @@ std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescription
 
 	return attribDescs;
 }
+
+bool Vertex::operator==(const Vertex & other) const
+{
+	return this->pos == other.pos && this->norm == other.norm && this->texCoord == other.texCoord;
+}

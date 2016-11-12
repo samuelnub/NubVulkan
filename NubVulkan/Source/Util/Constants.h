@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <glm/glm.hpp>
+#include <glm/gtx/hash.hpp>
 
 struct Vertex
 {
@@ -19,9 +20,27 @@ struct Vertex
 
 	// Attribute descriptions - VAO's pretty much
 	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
+
+	bool operator==(const Vertex &other) const;
 };
 
+namespace std
+{
+	// A hash struct, something i don't know yet. I'm sorry
+	template<> 
+	struct hash<Vertex>
+	{
+		size_t operator()(Vertex const &vertex) const
+		{
+			return ((hash<glm::vec3>()(vertex.pos) ^
+				(hash<glm::vec3>()(vertex.norm) << 1)) >> 1) ^
+				(hash<glm::vec2>()(vertex.texCoord) << 1);
+		}
+	};
+}
+
 // Only for testing at this point! not really needed
+/*
 const std::vector<Vertex> vertices = {
 	{ { -0.5f, -0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f },{ 0.0f, 0.0f } },
 	{ { 0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f },{ 1.0f, 0.0f } },
@@ -39,6 +58,7 @@ const std::vector<uint32_t> indices = {
 	0, 1, 2, 2, 3, 0,
 	4, 5, 6, 6, 7, 4
 };
+*/
 
 struct UniformBufferObject
 {

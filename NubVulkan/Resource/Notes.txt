@@ -344,3 +344,7 @@
 11 Nov 2016:
 	model loading, with tinyobjloader
 	loadModel func!
+
+12 Nov 2016:
+	Finished up everything! And also a taste of a freaky std hash function
+	implementation
