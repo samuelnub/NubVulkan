@@ -13,3 +13,6 @@ NubVulkan/Debug/vc140.idb
 *.filters
 *.obj
 *.idb
+*.exe
+Release/NubVulkan.iobj
+*.ipdb

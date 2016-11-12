@@ -24,7 +24,7 @@ void HelloTriangleApp::initWindow()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	this->window = glfwCreateWindow(WIDTH, HEIGHT, "NubVulkan", nullptr, nullptr);
-
+	
 	// Hooooo! i'm here from recreateSwapChain()!
 	glfwSetWindowUserPointer(this->window, this);
 	// woah, you can set your own custom pointer for your
@@ -444,7 +444,7 @@ void HelloTriangleApp::onWindowResized(GLFWwindow * window, int width, int heigh
 	}
 
 	HelloTriangleApp *app = reinterpret_cast<HelloTriangleApp *>(glfwGetWindowUserPointer(window));
-	// so _that's_ how you reinterpret_cast... cool beans
+	// so _that's_ how you reinterpret_cast... cool
 	// man, that gave me a false sense of intelligence
 
 	app->recreateSwapChain();
