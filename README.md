@@ -1,0 +1,1 @@
+Hi! This is a very early repository of mine which just tries to understand the incredible verbosity of the Vulkan API when it first came out in 2016. It was not intended to do much, but it was capable of rendering meshes and loading in custom .obj files.
